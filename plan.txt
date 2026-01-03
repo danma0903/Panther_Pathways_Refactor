@@ -1,0 +1,3 @@
+the way the program works is that everything is read from the svg file. The contents are used to both inject the svg into the html so it is rendered and to load information into the back end to actually create the nodes of the graph and the edges.
+
+distances will need to be calculated on the fly most likely.

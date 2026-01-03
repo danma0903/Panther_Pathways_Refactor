@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script src="main.js"></script>
+     <div class="drawer-content">
+        <div class="selector-container">
+          <select id="startLocSelector" class="loc-selector">
+            <option selected disabled hidden>
+              &#128204;Select Start Location
+            </option>
+            <option>hi friends</option>
+          </select>
+          <select id="endLocSelector" class="loc-selector">
+            <option selected disabled hidden>Select End Location</option>
+          </select>
+        </div>
+    <button onclick="connectCircles(['node-1', 'node-2', 'node-3'])">
+      Connect Circles
+    </button>
+    <div id="svg-container">
+      <!-- <g id="lines"></g> -->
+    </div>
+    <script>
+      function connectCircles(ids) {
+        const svg = document.querySelector("svg");
+        const linesGroup = document.getElementById("lines");
+
+        // Clear existing lines
+        linesGroup.innerHTML = "";
+
+        // Connect each circle to the next one in the array
+        for (let i = 0; i < ids.length - 1; i++) {
+          const circle1 = document.getElementById(ids[i]);
+          const circle2 = document.getElementById(ids[i + 1]);
+
+          if (circle1 && circle2) {
+            const x1 = circle1.getAttribute("cx");
+            const y1 = circle1.getAttribute("cy");
+            const x2 = circle2.getAttribute("cx");
+            const y2 = circle2.getAttribute("cy");
+
+            const line = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "line"
+            );
+            line.setAttribute("x1", x1);
+            line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2);
+            line.setAttribute("y2", y2);
+            line.setAttribute("stroke", "#0000FF");
+            line.setAttribute("stroke-width", "2");
+
+            linesGroup.appendChild(line);
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
