@@ -153,7 +153,7 @@ class graphEdge {
 	}
 }
 
-function Dijkstras(graph, sourceNodeName) {
+export function Dijkstras(graph, sourceNodeName) {
 	let queue = [];
 	let prev = {};
 	let dists = {};
@@ -183,7 +183,8 @@ function Dijkstras(graph, sourceNodeName) {
 			continue;
 		}
 		const currentNodeNeighbors = graph.getNeighborNodes(currentNode);
-		for (neighbor of currentNodeNeighbors) {
+		// console.log(currentNodeNeighbors);
+		for (const neighbor of currentNodeNeighbors) {
 			const weight = graph.getDistanceBetween(
 				currentNode.getName(),
 				neighbor.getName()

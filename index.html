@@ -1,32 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <script type="module"src="main.js"></script>
-  </head>
-  <body>
-    
-     <div class="drawer-content">
-        <div class="selector-container">
-          <select id="startLocSelector" class="loc-selector">
-            <option selected disabled hidden>
-              &#128204;Select Start Location
-            </option>
-            <option>hi friends</option>
-          </select>
-          <select id="endLocSelector" class="loc-selector">
-            <option selected disabled hidden>Select End Location</option>
-          </select>
-        </div>
-    <button onclick="connectCircles(['node-1', 'node-2', 'node-3'])">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <script type="module" src="main.js"></script>
+</head>
+
+<body>
+  <div class="drawer-content">
+    <div class="selector-container">
+      <select id="startLocSelector" class="loc-selector" onchange="">
+        <option selected disabled hidden>
+          &#128204;Select Start Location
+        </option>
+        <option>hi friends</option>
+      </select>
+      <select id="endLocSelector" class="loc-selector" onchange="">
+        <option selected disabled hidden>Select End Location</option>
+      </select>
+    </div>
+    <!-- <button onclick="connectCircles(['node-1', 'node-2', 'node-3'])">
       Connect Circles
-    </button>
+    </button> -->
     <div id="svg-container">
       <!-- <g id="lines"></g> -->
     </div>
-    <script>
+    <script type="module">
+      import { PathfindingAPI } from "/main.js"
+      const startLocations = ["HSP", "LRC", "NAS", "TEC", "PAC", "MAK", "CDC", "NOG", "FFA", "RHS", "RHN", "PAS", "SHW", "COS", "MOH", "PAN", "LUC"]; //list of strings
+      const endLocations = ["HSP", "LRC", "NAS", "TEC", "PAC", "MAK", "CDC", "NOG", "FFA", "RHS", "RHN", "PAS", "SHW", "COS", "MOH", "PAN", "LUC"]; //list of strings
+
+      const startLocationSelector =
+        document.getElementById("startLocSelector");
+      const endLocationSelector = document.getElementById("endLocSelector");
+
+      startLocations.forEach((location) => {
+        addOptionToSelectTag(location, startLocationSelector);
+      });
+      endLocations.forEach((location) => {
+        addOptionToSelectTag(location, endLocationSelector);
+      });
+
+      function addOptionToSelectTag(option, parent) {
+        //accepts a string and creates an option tag
+        const newOptionElement = document.createElement("option");
+        newOptionElement.textContent = option;
+        parent.appendChild(newOptionElement);
+      }
+
+      let startLocation = null;
+      let endLocation = null;
+
+
+
+
+      // Add event listeners here
+      endLocationSelector.addEventListener("change", (event) => {
+        endLocation = event.target.value;
+        endLocation = "vnode-" + endLocation
+        if (startLocation && endLocation) {
+          const path = PathfindingAPI.findPath(startLocation, endLocation);
+
+          connectCircles(path);
+        }
+      });
+      startLocationSelector.addEventListener("change", (event) => {
+        startLocation = event.target.value;
+        startLocation = "vnode-" + startLocation
+
+
+        if (startLocation && endLocation) {
+          const path = PathfindingAPI.findPath(startLocation, endLocation);
+
+          connectCircles(path);
+
+        }
+      });
+
+
       function connectCircles(ids) {
         const svg = document.querySelector("svg");
         const linesGroup = document.getElementById("lines");
@@ -55,11 +108,13 @@
             line.setAttribute("y2", y2);
             line.setAttribute("stroke", "#0000FF");
             line.setAttribute("stroke-width", "2");
+            line.setAttribute("stroke-linecap", "round")
 
             linesGroup.appendChild(line);
           }
         }
       }
     </script>
-  </body>
+</body>
+
 </html>

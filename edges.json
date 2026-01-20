@@ -1,6 +1,17 @@
 {
-  "edges": [
-    { "from": "node-1", "to": "node-2" },
-    { "from": "node-2", "to": "node-3" }
-  ]
+	"edges": [
+		{ "from": "vnode-NAS", "to": "node-NASE1", "type": "virtual" },
+		{ "from": "node-NASE1", "to": "node-NAS3" },
+		{ "from": "node-NAS3", "to": "node-NAS2" },
+		{ "from": "node-NAS2", "to": "node-NAS4" },
+		{ "from": "node-NAS4", "to": "node-RHS4" },
+		{ "from": "node-RHS4", "to": "node-RHS3" },
+		{ "from": "node-RHS3", "to": "node-RHS2" },
+		{ "from": "node-RHS2", "to": "node-LRC4" },
+		{ "from": "node-LRC4", "to": "node-LRC3" },
+		{ "from": "node-LRC3", "to": "node-LRC2" },
+		{ "from": "node-LRC2", "to": "node-LRC1" },
+		{ "from": "node-LRC1", "to": "node-LRCE1" },
+		{ "from": "node-LRCE1", "to": "vnode-LRC", "type": "virtual" }
+	]
 }
