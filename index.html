@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Document</title>
   <script type="module" src="main.js"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -29,8 +30,8 @@
     </div>
     <script type="module">
       import { PathfindingAPI } from "/main.js"
-      const startLocations = ["HSP", "LRC", "NAS", "TEC", "PAC", "MAK", "CDC", "NOG", "FFA", "RHS", "RHN", "PAS", "SHW", "COS", "MOH", "PAN", "LUC"]; //list of strings
-      const endLocations = ["HSP", "LRC", "NAS", "TEC", "PAC", "MAK", "CDC", "NOG", "FFA", "RHS", "RHN", "PAS", "SHW", "COS", "MOH", "PAN", "LUC"]; //list of strings
+      const startLocations = ["PAS", "MAK", "LUC", "CST", "HSP", "CDC", "PAN", "UNS", "NOG", "STC", "SOG", "BUS", "LRC", "NAS", "MOH", "RHS", "RHN", "CIC", "FFA", "PAC", "STS", "SHW", "COS", "TEC", "ACT"]; //list of strings
+      const endLocations = ["PAS", "MAK", "LUC", "CST", "HSP", "CDC", "PAN", "UNS", "NOG", "STC", "SOG", "BUS", "LRC", "NAS", "MOH", "RHS", "RHN", "CIC", "FFA", "PAC", "STS", "SHW", "COS", "TEC", "ACT"]; //list of strings
 
       const startLocationSelector =
         document.getElementById("startLocSelector");

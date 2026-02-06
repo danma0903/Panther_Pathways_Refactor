@@ -8,7 +8,7 @@ let canvasWidth;
 let scale = 1;
 let myGraph;
 document.addEventListener("DOMContentLoaded", () => {
-  fetch("vector_map3.svg")
+  fetch("vector_map.svg")
     .then((response) => response.text())
     .then(async (svgContent) => {
       const parser = new DOMParser();
@@ -137,7 +137,9 @@ function onZoom(e) {
   const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
   let newScale = currentScale * zoomFactor;
 
-  newScale = Math.max(0.5, Math.min(4, newScale));
+  console.log(a);
+
+  newScale = Math.max(1, Math.min(2, newScale));
   const scaleDifference = newScale - currentScale;
   const offsetX = -(x * scaleDifference);
   const offsetY = -(y * scaleDifference);
@@ -146,11 +148,15 @@ function onZoom(e) {
   const newPanY = oldPanY + offsetY;
 
   scale = newScale;
+  const {
+    x: constrainedX,
+    y: constrainedY
+  } = constrainPan(newPanX, newPanY, newScale);
   document
     .getElementById("main")
     .setAttribute(
       "transform",
-      `matrix(${newScale}, ${b}, ${c}, ${newScale}, ${newPanX}, ${newPanY})`,
+      `matrix(${newScale}, ${b}, ${c}, ${newScale}, ${constrainedX}, ${constrainedY})`,
     );
 }
 
@@ -250,7 +256,10 @@ async function loadNodes(fileContent) {
   const edges = await fetch("./edges.json").then((response) => response.json());
   for (let edge of edges.edges) {
     let edgeWeight;
+    let isDirected = false;
     if (edge.type === "virtual") {
+
+      isDirected = true;
       edgeWeight = 0;
     } else {
       edgeWeight = distance(
@@ -259,7 +268,7 @@ async function loadNodes(fileContent) {
       );
     }
 
-    mapGraph.addEdge(edgeWeight, edge.from, edge.to);
+    mapGraph.addEdge(edgeWeight, edge.from, edge.to, isDirected);
   }
   console.log(mapGraph);
   return mapGraph;
@@ -270,16 +279,47 @@ export const PathfindingAPI = {
       return [startNode]; // or return [] if you want no path
     }
     const [dists, prev] = Dijkstras(myGraph, startNode);
-    console.log(prev);
+    console.log("This is prev", prev);
     const path = [];
-    let current = endNode;
-    while (current !== null) {
-      if (current.includes("vnode")) {
-        current = prev[current];
-        continue;
-      }
-      path.unshift(current);
-      current = prev[current];
+
+
+    let entranceNodes;
+    console.log(myGraph.getNode(endNode).edges, myGraph.getNode(endNode));
+
+    entranceNodes = myGraph.getNeighborNodes(myGraph.getNode(endNode));
+    console.log(entranceNodes);
+
+
+    let min = entranceNodes[0];
+    for (const currentNode of entranceNodes) {
+        if (dists[min.getName()] > dists[currentNode.getName()]) {
+          min = currentNode;
+        } else {
+          continue;
+        }
+    }
+
+
+
+
+    // let entranceNodes = [] 
+    // endNode.getOppositeNodes()
+
+          let current = min; 
+          console.log(current);
+      //  it correctly ends at LRCE1 and has a null prev
+      console.log(current.getName(), myGraph.getNode(startNode).getName());
+      while (current.getName() !== myGraph.getNode(startNode).getName()) {
+      // // if (current.includes("vnode")) {
+      //   current = prev[current]; 
+
+      //   continue;
+      // }
+      
+      path.unshift(current.getName());
+
+      current = myGraph.getNode(prev[current.getName()]);
+      console.log(current);
     }
     return path;
   },

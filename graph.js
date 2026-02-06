@@ -73,24 +73,30 @@ export class graph {
 	getNeighborNodes(node) {
 		let neighborNodes = [];
 		for (let i = 0; i < node.edges.length; i++) {
-			if (
-				node.edges[i].node1.getName() === node.getName() ||
-				node.edges[i].node2.getName() === node.getName()
-			) {
-				neighborNodes.push(node.edges[i].getOppositeNode(node));
-			} else {
-				console.log("no");
+			// if (
+			// 	node.edges[i].fromNode.getName() === node.getName() ||
+			// 	node.edges[i].toNode.getName() === node.getName()
+			// ) {
+			// 	neighborNodes.push(node.edges[i].getOppositeNode(node));
+			// } else {
+			// 	console.log("no");
+			// }
+
+			const edge = node.edges[i];
+			const oppositeNode = edge.getOppositeNode(node);
+			if (!edge.directed || edge.fromNode.getName() === node.getName()) { 
+				neighborNodes.push(oppositeNode);
 			}
 		}
 		return neighborNodes;
 	}
 
-	addEdge(weight, node1Name, node2Name) {
+	addEdge(weight, node1Name, node2Name, directed) {
 		//add duplicate checker?
 		//we should assume that nodes have unique names and that weight is not a key identifier
 		const node1 = this.getNode(node1Name);
 		const node2 = this.getNode(node2Name);
-		const newEdge = new graphEdge(weight, node1, node2);
+		const newEdge = new graphEdge(weight, node1, node2, directed);
 		node1.addEdge(newEdge);
 		node2.addEdge(newEdge);
 		this.edges.push(newEdge);
@@ -132,24 +138,25 @@ class graphNode {
 }
 
 class graphEdge {
-	constructor(weight, node1, node2) {
+	constructor(weight, node1, node2, directed) {
 		this.weight = weight;
-		this.node1 = node1;
-		this.node2 = node2;
+		this.fromNode = node1;
+		this.toNode = node2;
+		this.directed = directed;
 	}
 
 	getNodes() {
 		//returns the names of the nodes the edge attaches
-		return [this.node1.getName(), this.node2.getName()];
+		return [this.fromNode.getName(), this.toNode.getName()];
 	}
 	getOppositeNode(node) {
 		if (
-			node.getName() != this.node1.getName() &&
-			node.getName() != this.node2.getName()
+			node.getName() != this.fromNode.getName() &&
+			node.getName() != this.toNode.getName()
 		) {
 			throw new Error("Invalid node");
 		}
-		return node.getName() === this.node1.getName() ? this.node2 : this.node1;
+		return node.getName() === this.fromNode.getName() ? this.toNode : this.fromNode;
 	}
 }
 
@@ -190,6 +197,8 @@ export function Dijkstras(graph, sourceNodeName) {
 				neighbor.getName()
 			);
 			const newDist = dists[currentNode.getName()] + weight;
+			// 
+
 			if (newDist < dists[neighbor.getName()]) {
 				dists[neighbor.getName()] = newDist;
 				prev[neighbor.getName()] = currentNode.getName();
