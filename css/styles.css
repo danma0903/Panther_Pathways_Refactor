@@ -16,17 +16,31 @@ html, body {
 
 .selector-container {
     background-color: lightgrey;
-    width: 160px;
-    height: 340px;
+    width: 330px;
+    height: 800px;
     border-radius: 5px;
     position: absolute;
     z-index: 2;
-    margin-top: 10px;
-    margin-left: 10px;
+    margin-top: 30px;
+    margin-left: 30px;
 }
 
 .loc-selector {
-    font-size: 10px;
+    margin-top: 7px;
+    font-size: 1.25rem;
+    width: 100%;
+    padding: 10px 40px 10px 55px;
+    background-color: #f2f2f2;
+    color: #333;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.loc-selector:hover,
+.loc-selector:focus {
+    border-color: #888;
+    outline: none;
 }
 
 .svg-container {

@@ -139,7 +139,7 @@ function onZoom(e) {
 
   console.log(a);
 
-  newScale = Math.max(1, Math.min(2, newScale));
+  newScale = Math.max(1, Math.min(8, newScale));
   const scaleDifference = newScale - currentScale;
   const offsetX = -(x * scaleDifference);
   const offsetY = -(y * scaleDifference);
