@@ -253,7 +253,7 @@ async function loadNodes(fileContent) {
   //load edge data
   //DO WE NEED TO ALTER THE CODE to PREVEnt DUPLICATE EDGES FROM BEING CREATED???
   //EX: It's a problem if we have an edge from a to b and also from b to a because those are the same
-  const edges = await fetch("./edges.json").then((response) => response.json());
+  const edges = await fetch("./data/edges.json").then((response) => response.json());
   for (let edge of edges.edges) {
     let edgeWeight;
     let isDirected = false;
