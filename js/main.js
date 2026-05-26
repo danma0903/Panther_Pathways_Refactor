@@ -1,61 +1,57 @@
-//Event listener reads the svg into memory and loads it into the html as apart of the svg container
-
 import { graph, Dijkstras } from "./graph.js";
-//global variable to hold transformation information
+
+// Pan/zoom session state ──────────────────────────────────────────────────────
+// canvas:      per-gesture snapshot (mouse/touch start position, transform, SCTM)
+// scale:       current zoom level kept in sync with the SVG matrix
+// canvasWidth/Height: intrinsic dimensions of the SVG canvas (fixed at 1900×1900)
 let canvas = {};
 let canvasHeight;
 let canvasWidth;
 let scale = 1;
 let myGraph;
 
+// ── Data loading ──────────────────────────────────────────────────────────────
+
 async function loadNodes(filePath, graph, canvas) {
-	//Function loades nodes defined at *filePath and adds them to the *graph object
-	//filePath needs to be a valid path to a properly formatted json file.
-	//canvas is the svg element that physical nodes will be attached to
+	// Fetches node definitions from a JSON file, registers each node in the
+	// in-memory graph, and renders it as an SVG circle inside the canvas element.
 	const data = await fetch(filePath).then((response) => response.json());
 	const nodes = data.nodes;
 	const nodeGroup = canvas.querySelector("#nodes");
-	//iterate over json structure in order to add all nodes into graph in memory
+
 	for (const [nodeName, nodeData] of Object.entries(nodes)) {
-		// console.log(nodeData, nodeName);
 		const position = nodeData.position;
 		const newNode = graph.createNode(position.x, position.y, nodeName);
-
 		placeNode(nodeGroup, newNode, 2);
 	}
 
 	loadEdges(filePath, graph);
-
-	// console.log(graph);
 	return graph;
 }
 
 async function loadEdges(filePath, graph) {
+	// Fetches edge definitions and adds them to the graph.
+	// Virtual edges (entrance connectors) are directed with weight 0;
+	// real edges are weighted by the Euclidean distance between their nodes.
 	const data = await fetch(filePath).then((response) => response.json());
 	const edges = data.edges;
 
 	for (const edge of edges) {
-		// console.log(edge);
-		// console.log(edge.from);
 		let edgeWeight;
 		let isDirected = false;
 		if (edge.isVirtual) {
 			isDirected = true;
 			edgeWeight = 0;
 		} else {
-			// console.log(edge.from);
-			// console.log(edge.to);
 			edgeWeight = distance(graph.getNode(edge.from), graph.getNode(edge.to));
 		}
-		// console.log(isDirected);
 		graph.createEdge(edgeWeight, edge.from, edge.to, isDirected);
 	}
 	return graph;
 }
 
 function placeNode(container, nodeData, radius) {
-	//Function receives three arguments: Container, which is the svg element that the node will be parented to,
-	//nodeData, which is a graphNode object containing node information, and radius
+	// Creates an SVG <circle> for a graph node and appends it to the given group.
 	const node = document.createElementNS("http://www.w3.org/2000/svg", "circle");
 	node.setAttribute("id", nodeData.getName());
 	node.setAttribute("cx", nodeData.xCoord);
@@ -65,207 +61,104 @@ function placeNode(container, nodeData, radius) {
 	container.appendChild(node);
 }
 
+// ── Initialisation ────────────────────────────────────────────────────────────
+
 document.addEventListener("DOMContentLoaded", () => {
-	//main entrypoint
 	fetch("vector_map.svg")
 		.then((response) => response.text())
 		.then(async (svgContent) => {
 			const parser = new DOMParser();
 			const fileContent = parser.parseFromString(svgContent, "image/svg+xml");
-			// myGraph = await loadNodes(fileContent);
 			myGraph = new graph();
 
 			const svg = fileContent.querySelector("svg");
 			loadNodes("./data/db.json", myGraph, svg);
-			// canvasHeight = svg.height.baseVal.value;
+
+			// Canvas dimensions are fixed to match the SVG viewBox.
 			canvasHeight = 1900;
 			canvasWidth = 1900;
-			// canvasWidth = svg.width.baseVal.value;
-			//create line group for the line overlay to be displayed
-			const linesGroup = document.createElementNS(
-				"http://www.w3.org/2000/svg",
-				"g",
-			);
-			linesGroup.id = "lines";
-			//insert the line group at the top of the svg container
-			//we use appendChild because we want the lines to be overlayed above the nodes
-			//which means that they need to be a group placed/ drawn after the node group which is #visible_ellipses
-			// svg.appendChild(linesGroup, svg.querySelector("#main"));
-			svg.querySelector("#main").appendChild(linesGroup);
-			document.getElementById("svg-container").appendChild(svg);
-			//set transform to identity matrix
-			svg
-				.querySelector("#main")
-				.setAttribute("transform", "matrix(1, 0, 0, 1, 0, 0)");
-			//scale svg to container size
-			svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
-			//svg.style.width = window.innerWidth + "px";
-			svg.style.width = 100 + "vw";
-			//svg.style.height = window.innerHeight + "px";
-			svg.style.height = 100 + "vh";
-			svg.style.display = "block";
-			// svg.style.width = "100%";
-			// svg.style.height = "100%";
-			getTransform();
 
-			document
-				.getElementById("svg-container")
-				.addEventListener("wheel", onZoom);
-			document
-				.getElementById("svg-container")
-				.addEventListener("mousedown", panStart);
+			// The <g id="lines"> group is appended last inside #main so route lines
+			// render above all node circles (later siblings paint on top in SVG).
+			const linesGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+			linesGroup.id = "lines";
+			svg.querySelector("#main").appendChild(linesGroup);
+
+			document.getElementById("svg-container").appendChild(svg);
+
+			// Seed an explicit identity matrix so getTransform() always finds a
+			// baseVal to consolidate rather than returning null.
+			svg.querySelector("#main").setAttribute("transform", "matrix(1, 0, 0, 1, 0, 0)");
+
+			svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+			svg.style.width = "100vw";
+			svg.style.height = "100vh";
+			svg.style.display = "block";
+
+			const container = document.getElementById("svg-container");
+			container.addEventListener("wheel", onZoom);
+			container.addEventListener("mousedown", panStart);
+			container.addEventListener("touchstart", touchStart, { passive: false });
 		});
-	console.log("hello world");
 });
 
-function viewPortToElementCoordinateSpaceTransformation(
-	x,
-	y,
-	sctm = null,
-	// elementTransform = null
-) {
+// ── Coordinate space conversion ───────────────────────────────────────────────
+
+function viewPortToElementCoordinateSpaceTransformation(x, y, sctm = null) {
+	// Converts a point from viewport (screen) pixel coordinates into the SVG
+	// element's internal coordinate space.
+	//
+	// The SVG element has its own coordinate system that shifts as we pan and zoom.
+	// getScreenCTM() returns the composite 2D matrix that maps element coords →
+	// screen pixels. Inverting that matrix and applying it to the input point gives
+	// the equivalent position in element space.
+	//
+	// sctm is passed explicitly wherever possible so we avoid querying the DOM on
+	// every mouse/touch move event.
 	const p = new DOMPoint(x, y);
-
-	let screenCTM;
-	if (sctm === null) {
-		screenCTM = document.getElementById("main").getScreenCTM();
-	} else {
-		screenCTM = sctm;
-	}
-
-	const inverseScreenTransform = screenCTM.inverse();
-	const transformedPoint = p.matrixTransform(inverseScreenTransform);
+	const screenCTM = sctm ?? document.getElementById("main").getScreenCTM();
+	const transformedPoint = p.matrixTransform(screenCTM.inverse());
 	return { x: transformedPoint.x, y: transformedPoint.y };
 }
 
-//start of pan logic: process information before user lets go of the mouse
-function panStart(e) {
-	const { clientX, clientY } = e;
-	// console.log(clientX, clientY);
-	const currentTransformation = getTransform();
+// ── Mouse pan ─────────────────────────────────────────────────────────────────
 
+function panStart(e) {
+	// Captures the pointer's starting position in element space and snapshots the
+	// current SVG transform matrix. mousemove/mouseup are registered on `document`
+	// rather than the SVG so a fast drag that leaves the element boundary doesn't
+	// silently drop the listeners.
+	const { clientX, clientY } = e;
 	const sctm = document.getElementById("main").getScreenCTM();
-	// const sctm = document.getElementById("canvas").getScreenCTM();
-	const transformed = viewPortToElementCoordinateSpaceTransformation(
-		clientX,
-		clientY,
-		sctm,
-		// currentTransformation
-	);
-	// console.log("transformed: " + transformed.x, transformed.y);
-	//implicit global variables
-	canvas = { mouseStart: transformed, transform: currentTransformation, sctm };
+	const transformed = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, sctm);
+
+	canvas = { mouseStart: transformed, transform: getTransform(), sctm };
 	document.addEventListener("mousemove", onPan);
 	document.addEventListener("mouseup", endPan);
-	// document.getElementById("svg-container").addEventListener("mousemove", onPan);
-	// document.getElementById("svg-container").addEventListener("mouseup", endPan);
 }
 
-function constrainPan(x, y, scale) {
-	//base case where everything fits in the viewport window.
-	let constrainedX = x;
-	let constrainedY = y;
-	if (scale < 0.5) {
-		return { x: 0, y: 0 };
-	}
-	const padding = 10;
-	const maxPanX = 0 + padding;
-	const maxPanY = 0 + padding;
-	const minPanX = canvasWidth - canvasWidth * scale - padding;
-	const minPanY = canvasHeight - canvasHeight * scale - padding;
-
-	if (x < minPanX) {
-		constrainedX = minPanX;
-	} else if (x > maxPanX) {
-		constrainedX = maxPanX;
-	}
-
-	if (y < minPanY) {
-		constrainedY = minPanY;
-	} else if (y > maxPanY) {
-		constrainedY = maxPanY;
-	}
-
-	return { x: constrainedX, y: constrainedY };
-
-	//how to contstrain how far someone can pan?
-	//ex: lets assume we are at 2x zoom. This means effective area we can pan is 2x the viewbox size. So if our viewbox is at 1000 then at a 2x scale our new space is effectively
-	//2000. This means that at any given point someone should not be able to pan past an x value of 1000. The reason for this is because if x=0 it means no horizontal
-	//translation has occurred and we are viewing the far left of the image. 0 is effectively th eupper bound. the lower bound is the viewport size - the scaled viewport size.
-}
-
-function onZoom(e) {
-	e.preventDefault();
-	const { clientX, clientY } = e;
-	const sctm = document.getElementById("main").getScreenCTM();
-	const { x, y } = viewPortToElementCoordinateSpaceTransformation(
-		clientX,
-		clientY,
-		sctm,
-	);
-	const [a, b, c, d, oldPanX, oldPanY] = getTransform();
-	const currentScale = a;
-
-	const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-	let newScale = currentScale * zoomFactor;
-
-	// console.log(a);
-
-	newScale = Math.max(1, Math.min(8, newScale));
-	const scaleDifference = newScale - currentScale;
-	const offsetX = -(x * scaleDifference);
-	const offsetY = -(y * scaleDifference);
-
-	const newPanX = oldPanX + offsetX;
-	const newPanY = oldPanY + offsetY;
-
-	scale = newScale;
-	const { x: constrainedX, y: constrainedY } = constrainPan(
-		newPanX,
-		newPanY,
-		newScale,
-	);
-	document
-		.getElementById("main")
-		.setAttribute(
-			"transform",
-			`matrix(${newScale}, ${b}, ${c}, ${newScale}, ${constrainedX}, ${constrainedY})`,
-		);
-}
-
-//when you pan you need to claculaute the distance between where the mouse started and where it ended.
-//but if you scale up the svg, when you calculate the distance,
 function onPan(e) {
+	// Translates the SVG map by the distance the pointer has moved since the last event.
+	//
+	// Why convert to element space then multiply by scale?
+	// Both positions are transformed into element coordinates, so their difference
+	// is in element units. The translation components (e and f) of the SVG matrix
+	// live in screen/viewport pixels, so we multiply the delta by the current scale
+	// to convert element-space units back to viewport pixels before adding it to
+	// the existing translation.
 	const { clientX, clientY } = e;
-	// console.log(canvas.transform);
-	const currentMousePosition = viewPortToElementCoordinateSpaceTransformation(
-		clientX,
-		clientY,
-		canvas.sctm,
-	);
+	const currentMousePosition = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, canvas.sctm);
 	const [a, b, c, d, translateX, translateY] = canvas.transform;
+
 	const mouseDelta = {
 		x: (currentMousePosition.x - canvas.mouseStart.x) * scale,
 		y: (currentMousePosition.y - canvas.mouseStart.y) * scale,
 	};
 
-	const horizontalTranslation = translateX + mouseDelta.x;
-	const verticalTranslation = translateY + mouseDelta.y;
+	const { x, y } = constrainPan(translateX + mouseDelta.x, translateY + mouseDelta.y, scale);
+	document.getElementById("main").setAttribute("transform", `matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})`);
 
-	const { x, y } = constrainPan(
-		horizontalTranslation,
-		verticalTranslation,
-		scale,
-	);
-	document
-		.getElementById("main")
-		.setAttribute("transform", `matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})`);
-	// document
-	// 	.getElementById("main")
-	// 	.setAttribute(
-	// 		"transform",
-	// 		`matrix(${a}, ${b}, ${c}, ${d}, ${horizontalTranslation}, ${verticalTranslation})`
-	// 	);
+	// Advance the start position so the next event calculates a delta from here.
 	canvas.mouseStart = currentMousePosition;
 	canvas.transform = [a, b, c, d, x, y];
 }
@@ -274,20 +167,206 @@ function endPan(e) {
 	canvas = {};
 	document.removeEventListener("mousemove", onPan);
 	document.removeEventListener("mouseup", endPan);
-
-	//   document
-	//     .getElementById("svg-container")
-	//     .removeEventListener("mousemove", onPan);
-	//   document
-	//     .getElementById("svg-container")
-	//     .removeEventListener("mouseup", endPan);
 }
-function getTransform() {
-	const main = document.getElementById("main");
-	
 
+// ── Touch pan & pinch zoom ────────────────────────────────────────────────────
+// 1 finger  → pan        (mirrors mouse pan logic)
+// 2 fingers → pinch zoom (mirrors scroll-wheel zoom logic)
+
+function touchStart(e) {
+	e.preventDefault();
+	const sctm = document.getElementById("main").getScreenCTM();
+
+	if (e.touches.length === 1) {
+		// Single finger: start a pan session identical to panStart.
+		const { clientX, clientY } = e.touches[0];
+		const transformed = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, sctm);
+		canvas = { mouseStart: transformed, transform: getTransform(), sctm };
+	} else if (e.touches.length === 2) {
+		// Second finger added: record the current inter-finger distance as the
+		// baseline for computing the zoom ratio on subsequent move events.
+		const dx = e.touches[0].clientX - e.touches[1].clientX;
+		const dy = e.touches[0].clientY - e.touches[1].clientY;
+		canvas.lastPinchDistance = Math.hypot(dx, dy);
+		canvas.sctm = sctm;
+	}
+
+	document.addEventListener("touchmove", onTouchMove, { passive: false });
+	document.addEventListener("touchend", onTouchEnd);
+}
+
+function onTouchMove(e) {
+	e.preventDefault();
+
+	if (e.touches.length === 1 && canvas.mouseStart) {
+		// ── 1-finger pan: same math as onPan ─────────────────────────────────────
+		const { clientX, clientY } = e.touches[0];
+		const currentPos = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, canvas.sctm);
+		const [a, b, c, d, translateX, translateY] = canvas.transform;
+
+		const mouseDelta = {
+			x: (currentPos.x - canvas.mouseStart.x) * scale,
+			y: (currentPos.y - canvas.mouseStart.y) * scale,
+		};
+
+		const { x, y } = constrainPan(translateX + mouseDelta.x, translateY + mouseDelta.y, scale);
+		document.getElementById("main").setAttribute("transform", `matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})`);
+		canvas.mouseStart = currentPos;
+		canvas.transform = [a, b, c, d, x, y];
+
+	} else if (e.touches.length === 2) {
+		// ── 2-finger pinch zoom: same math as onZoom ─────────────────────────────
+		// The zoom factor is the ratio of the current inter-finger distance to the
+		// previous one. Spreading fingers apart gives a ratio > 1 (zoom in);
+		// pinching gives a ratio < 1 (zoom out). This is analogous to the sign of
+		// deltaY in the wheel handler.
+		//
+		// The midpoint between the two fingers serves as the focal point (equivalent
+		// to the cursor position in onZoom). See onZoom for a full explanation of
+		// the zoom-toward-point translation math.
+		const dx = e.touches[0].clientX - e.touches[1].clientX;
+		const dy = e.touches[0].clientY - e.touches[1].clientY;
+		const newDist = Math.hypot(dx, dy);
+
+		const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+		const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+		const sctm = document.getElementById("main").getScreenCTM();
+		const { x, y } = viewPortToElementCoordinateSpaceTransformation(midX, midY, sctm);
+
+		const [a, b, c, d, oldPanX, oldPanY] = getTransform();
+		const currentScale = a;
+
+		let newScale = currentScale * (newDist / (canvas.lastPinchDistance || newDist));
+		newScale = Math.max(1, Math.min(8, newScale));
+
+		const scaleDifference = newScale - currentScale;
+		const newPanX = oldPanX - x * scaleDifference;
+		const newPanY = oldPanY - y * scaleDifference;
+
+		scale = newScale;
+		const { x: cx, y: cy } = constrainPan(newPanX, newPanY, newScale);
+		document.getElementById("main").setAttribute("transform", `matrix(${newScale}, ${b}, ${c}, ${newScale}, ${cx}, ${cy})`);
+
+		canvas.lastPinchDistance = newDist;
+	}
+}
+
+function onTouchEnd(e) {
+	if (e.touches.length === 0) {
+		// All fingers lifted — tear down listeners and clear session state.
+		canvas = {};
+		document.removeEventListener("touchmove", onTouchMove);
+		document.removeEventListener("touchend", onTouchEnd);
+	} else if (e.touches.length === 1) {
+		// One finger lifted after a pinch: transition seamlessly into a pan session.
+		// Resetting mouseStart to the remaining finger's position prevents the first
+		// pan move from producing a large spurious jump.
+		const touch = e.touches[0];
+		const sctm = document.getElementById("main").getScreenCTM();
+		const transformed = viewPortToElementCoordinateSpaceTransformation(touch.clientX, touch.clientY, sctm);
+		canvas.mouseStart = transformed;
+		canvas.transform = getTransform();
+		canvas.sctm = sctm;
+		delete canvas.lastPinchDistance;
+	}
+}
+
+// ── Scroll-wheel zoom ─────────────────────────────────────────────────────────
+
+function onZoom(e) {
+	e.preventDefault();
+
+	// Convert the cursor position to element space to identify which point in the
+	// map the user is hovering over — this becomes the fixed focal point for zoom.
+	const { clientX, clientY } = e;
+	const sctm = document.getElementById("main").getScreenCTM();
+	const { x, y } = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, sctm);
+
+	const [a, b, c, d, oldPanX, oldPanY] = getTransform();
+	const currentScale = a;
+
+	// Scale by ±10 % per scroll tick, clamped to [1×, 8×].
+	const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+	const newScale = Math.max(1, Math.min(8, currentScale * zoomFactor));
+
+	// Zoom-toward-cursor math:
+	// The SVG transform maps element coordinates to screen pixels as:
+	//   screen = scale * element + pan
+	//
+	// For the focal point (x, y) to stay fixed on screen, its screen coordinate
+	// must be the same before and after the scale change:
+	//   scale_old * x + pan_old  =  scale_new * x + pan_new
+	//
+	// Solving for pan_new:
+	//   pan_new = pan_old + x * (scale_old - scale_new)
+	//           = pan_old - x * scaleDifference
+	const scaleDifference = newScale - currentScale;
+	const newPanX = oldPanX - x * scaleDifference;
+	const newPanY = oldPanY - y * scaleDifference;
+
+	scale = newScale;
+	const { x: constrainedX, y: constrainedY } = constrainPan(newPanX, newPanY, newScale);
+	document.getElementById("main").setAttribute(
+		"transform",
+		`matrix(${newScale}, ${b}, ${c}, ${newScale}, ${constrainedX}, ${constrainedY})`,
+	);
+}
+
+// ── Pan boundary enforcement ──────────────────────────────────────────────────
+
+function constrainPan(x, y, scale) {
+	// Clamps the translation so the user can never pan past the edge of the map.
+	//
+	// The SVG translation (e, f) expresses how far the canvas origin has shifted
+	// in screen pixels. For the map to stay fully on-screen:
+	//
+	//   Upper bound (maxPan ≈ 0):
+	//     Translation > 0 shifts the canvas right/down, revealing empty space on
+	//     the left/top edge. We allow a small padding overshoot for visual comfort.
+	//
+	//   Lower bound (minPan = canvasDim - canvasDim * scale):
+	//     At scale > 1 the rendered canvas is larger than the viewport. The lower
+	//     bound is negative, representing the maximum left/up shift before the
+	//     right/bottom edge of the map would leave the viewport.
+	//
+	//   Example at 2× zoom on a 1900 px canvas:
+	//     minPanX = 1900 - 1900×2 - 10 = -1910  (can shift up to 1910 px left)
+	//     maxPanX = 10                           (10 px slack to the right)
+	let constrainedX = x;
+	let constrainedY = y;
+
+	if (scale < 0.5) {
+		return { x: 0, y: 0 };
+	}
+
+	const padding = 10;
+	const maxPanX = padding;
+	const maxPanY = padding;
+	const minPanX = canvasWidth - canvasWidth * scale - padding;
+	const minPanY = canvasHeight - canvasHeight * scale - padding;
+
+	if (x < minPanX) constrainedX = minPanX;
+	else if (x > maxPanX) constrainedX = maxPanX;
+
+	if (y < minPanY) constrainedY = minPanY;
+	else if (y > maxPanY) constrainedY = maxPanY;
+
+	return { x: constrainedX, y: constrainedY };
+}
+
+// ── SVG transform helpers ─────────────────────────────────────────────────────
+
+function getTransform() {
+	// Reads the current transform on the #main group and returns a flat 6-element
+	// array [a, b, c, d, e, f] matching SVG matrix() notation:
+	//   a, d = scaleX / scaleY    (equal — we only use uniform scaling)
+	//   b, c = skewY / skewX      (always 0)
+	//   e, f = translateX / translateY
+	//
+	// consolidate() collapses any stacked transform list into a single matrix and
+	// returns null if no transform exists, in which case we return the identity.
+	const main = document.getElementById("main");
 	const consolidated = main.transform.baseVal.consolidate();
-	//in case there is no transformation, .consolidate() returns null and we return the identity matrix
 	if (!consolidated) {
 		return [1, 0, 0, 1, 0, 0];
 	}
@@ -296,54 +375,39 @@ function getTransform() {
 }
 
 function distance(p1, p2) {
-	const xDifference = p1.xCoord - p2.xCoord;
-	const yDifference = p1.yCoord - p2.yCoord;
-	const sumOfSquares = Math.pow(xDifference, 2) + Math.pow(yDifference, 2);
-	return Math.sqrt(sumOfSquares);
+	// Euclidean distance between two graph nodes, used to weight undirected edges.
+	const dx = p1.xCoord - p2.xCoord;
+	const dy = p1.yCoord - p2.yCoord;
+	return Math.sqrt(dx * dx + dy * dy);
 }
+
+// ── Pathfinding API ───────────────────────────────────────────────────────────
 
 export const PathfindingAPI = {
 	findPath(startNode, endNode) {
 		if (startNode === endNode) {
-			return [startNode]; // or return [] if you want no path
+			return [startNode];
 		}
+
 		const [dists, prev] = Dijkstras(myGraph, startNode);
-		console.log("This is prev", prev);
 		const path = [];
 
-		let entranceNodes;
-		console.log(myGraph.getNode(endNode).edges, myGraph.getNode(endNode));
-
-		entranceNodes = myGraph.getNeighborNodes(myGraph.getNode(endNode));
-		console.log(entranceNodes);
-
+		// A building may have multiple entrance connectors. Select the one with the
+		// shortest total distance from the source so the path ends at the optimal
+		// entry point rather than an arbitrary one.
+		const entranceNodes = myGraph.getNeighborNodes(myGraph.getNode(endNode));
 		let min = entranceNodes[0];
 		for (const currentNode of entranceNodes) {
 			if (dists[min.getName()] > dists[currentNode.getName()]) {
 				min = currentNode;
-			} else {
-				continue;
 			}
 		}
 
-		// let entranceNodes = []
-		// endNode.getOppositeNodes()
-
+		// Walk the prev-pointer chain back from the best entrance to the source.
 		let current = min;
-		console.log(current);
-		//  it correctly ends at LRCE1 and has a null prev
-		console.log(current.getName(), myGraph.getNode(startNode).getName());
 		while (current.getName() !== myGraph.getNode(startNode).getName()) {
-			// // if (current.includes("vnode")) {
-			//   current = prev[current];
-
-			//   continue;
-			// }
-
 			path.unshift(current.getName());
-
 			current = myGraph.getNode(prev[current.getName()]);
-			console.log(current);
 		}
 		return path;
 	},

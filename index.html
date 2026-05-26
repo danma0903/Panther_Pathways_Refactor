@@ -8,42 +8,40 @@
   <script type="module" src="js/main.js"></script>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Changa+One:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Changa+One:ital@0;1&display=swap" rel="stylesheet">
 </head>
 
 <body>
-  <div id="svg-container">
-  </div>
+  <div id="svg-container"></div>
+
   <div class="drawer-content">
     <div class="selector-container" id="menu">
-      <div class ="header-container">
+      <div class="header-container">
         <header>
           <a href="https://scc.losrios.edu/">
-          <img class="scc-logo" src="scc-logo-final.png">
+            <img class="scc-logo" src="scc-logo-final.png">
           </a>
           <div class="header-text">
             <h1 class="pantherpathways-title"><a href="https://scc.losrios.edu/">PantherPathways</a></h1>
             <h3 class="address-text">3835 Freeport Blvd. | Sacramento, CA 95822</h3>
           </div>
-          
         </header>
-      <input type="text" placeholder="Select Start Location" id="startLocator" autocomplete="off"/>
-      <ul id="startSuggestions"></ul>
-        
-      <input type="text" placeholder="Select End Location" id="endLocator" autocomplete="off"/>
-      <ul id="endSuggestions"></ul>
+        <input type="text" placeholder="Select Start Location" id="startLocator" autocomplete="off"/>
+        <ul id="startSuggestions"></ul>
+        <input type="text" placeholder="Select End Location" id="endLocator" autocomplete="off"/>
+        <ul id="endSuggestions"></ul>
       </div>
     </div>
 
     <script type="module">
       import { PathfindingAPI } from "./js/main.js"
-      const startLocations = ["PAS (Parking Structure)", "MAK (Makerspace)", "LUC (Lusk Center)", "CST (College Store)", "HSP (Hoos Swimming Pool)", "CDC (Child Development Center)", "PAN (Panther Cares)", "UNS (Union Stadium)", "NOG (North Gymnasium)", "STC (Student Center)", "SOG (South Gymnasium)", "BUS (Business Building)", "LRC (Learning Resource Center)", "NAS (Natural Sciences Building)", "MOH (Mohr Hall)", "RHS (Rodda Hall South)", "RHN (Rodda Hall North)", "CIC (City Cafe)", "FFA (Fischbacher Fine Arts Building)", "PAC (Performing Arts Center)", "STS (Student Services)", "SHW (Student Health & Wellness Center)", "COS (Cosmetology Building)", "TEC (Technology)", "ACT (Art Court Theatre)"]; //list of strings
-      const endLocations = ["PAS (Parking Structure)", "MAK (Makerspace)", "LUC (Lusk Center)", "CST (College Store)", "HSP (Hoos Swimming Pool)", "CDC (Child Development Center)", "PAN (Panther Cares)", "UNS (Union Stadium)", "NOG (North Gymnasium)", "STC (Student Center)", "SOG (South Gymnasium)", "BUS (Business Building)", "LRC (Learning Resource Center)", "NAS (Natural Sciences Building)", "MOH (Mohr Hall)", "RHS (Rodda Hall South)", "RHN (Rodda Hall North)", "CIC (City Cafe)", "FFA (Fischbacher Fine Arts Building)", "PAC (Performing Arts Center)", "STS (Student Services)", "SHW (Student Health & Wellness Center)", "COS (Cosmetology Building)", "TEC (Technology)", "ACT (Art Court Theatre)"]; //list of strings
+
+      const startLocations = ["PAS (Parking Structure)", "MAK (Makerspace)", "LUC (Lusk Center)", "CST (College Store)", "HSP (Hoos Swimming Pool)", "CDC (Child Development Center)", "PAN (Panther Cares)", "UNS (Union Stadium)", "NOG (North Gymnasium)", "STC (Student Center)", "SOG (South Gymnasium)", "BUS (Business Building)", "LRC (Learning Resource Center)", "NAS (Natural Sciences Building)", "MOH (Mohr Hall)", "RHS (Rodda Hall South)", "RHN (Rodda Hall North)", "CIC (City Cafe)", "FFA (Fischbacher Fine Arts Building)", "PAC (Performing Arts Center)", "STS (Student Services)", "SHW (Student Health & Wellness Center)", "COS (Cosmetology Building)", "TEC (Technology)", "ACT (Art Court Theatre)"];
+      const endLocations = ["PAS (Parking Structure)", "MAK (Makerspace)", "LUC (Lusk Center)", "CST (College Store)", "HSP (Hoos Swimming Pool)", "CDC (Child Development Center)", "PAN (Panther Cares)", "UNS (Union Stadium)", "NOG (North Gymnasium)", "STC (Student Center)", "SOG (South Gymnasium)", "BUS (Business Building)", "LRC (Learning Resource Center)", "NAS (Natural Sciences Building)", "MOH (Mohr Hall)", "RHS (Rodda Hall South)", "RHN (Rodda Hall North)", "CIC (City Cafe)", "FFA (Fischbacher Fine Arts Building)", "PAC (Performing Arts Center)", "STS (Student Services)", "SHW (Student Health & Wellness Center)", "COS (Cosmetology Building)", "TEC (Technology)", "ACT (Art Court Theatre)"];
 
       startLocations.sort();
       endLocations.sort();
-
 
       const startLocationSelector = document.getElementById("startLocator");
       const endLocationSelector = document.getElementById("endLocator");
@@ -53,56 +51,61 @@
       let finalStartLocation = null;
       let finalEndLocation = null;
 
+      // Filter suggestions as the user types.
       startLocationSelector.addEventListener("keyup", (event) => {
         const qry = startLocationSelector.value.toLowerCase();
-        const filteredLocations = startLocations.filter((item) => item.toLowerCase().includes(qry));
-        console.log(filteredLocations);
         startList.innerHTML = "";
-
-        for (let i = 0; i < filteredLocations.length; i++) {
-          const li = document.createElement("li");
-          li.textContent = filteredLocations[i];
-          startList.appendChild(li);
-        }
-
-        console.log(startList);
-       
-
-        if (!qry.length) {
-          startList.innerHTML = "";
-        }
+        if (!qry.length) return;
+        startLocations
+          .filter((item) => item.toLowerCase().includes(qry))
+          .forEach((location) => {
+            const li = document.createElement("li");
+            li.textContent = location;
+            startList.appendChild(li);
+          });
       });
 
-      startList.addEventListener("click", (event) => {
+      endLocationSelector.addEventListener("keyup", (event) => {
+        const qry = endLocationSelector.value.toLowerCase();
+        endList.innerHTML = "";
+        if (!qry.length) return;
+        endLocations
+          .filter((item) => item.toLowerCase().includes(qry))
+          .forEach((location) => {
+            const li = document.createElement("li");
+            li.textContent = location;
+            endList.appendChild(li);
+          });
+      });
 
+      // Show the full list when the input is clicked.
+      startLocator.addEventListener("click", (event) => {
+        startList.innerHTML = "";
+        startLocations.forEach((location) => {
+          const li = document.createElement("li");
+          li.textContent = location;
+          startList.appendChild(li);
+        });
+      });
+
+      endLocationSelector.addEventListener("click", (event) => {
+        endList.innerHTML = "";
+        endLocations.forEach((location) => {
+          const li = document.createElement("li");
+          li.textContent = location;
+          endList.appendChild(li);
+        });
+      });
+
+      // Selecting a suggestion fills the input; once both endpoints are set, run pathfinding.
+      startList.addEventListener("click", (event) => {
         if (event.target.tagName === "LI") {
           startLocationSelector.value = event.target.textContent;
-        
           startList.innerHTML = "";
         }
-        finalStartLocation = "vnode-" + startLocationSelector.value.slice(0,3);
+        finalStartLocation = "vnode-" + startLocationSelector.value.slice(0, 3);
         if (finalStartLocation && finalEndLocation) {
-          const path = PathfindingAPI.findPath(finalStartLocation, finalEndLocation);
-
-          connectCircles(path);
-        }
-
-      });
-
-        endLocationSelector.addEventListener("keyup", (event) => {
-        const qry = endLocationSelector.value.toLowerCase();
-        const filteredLocations = endLocations.filter((item) => item.toLowerCase().includes(qry));
-        console.log(filteredLocations);
-        endList.innerHTML = "";
-
-        for (let i = 0; i < filteredLocations.length; i++) {
-          const li = document.createElement("li");
-          li.textContent = filteredLocations[i];
-          endList.appendChild(li);
-        }
-
-        if (!qry.length) {
-          endList.innerHTML = "";
+          connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
         }
       });
 
@@ -111,162 +114,76 @@
           endLocationSelector.value = event.target.textContent;
           endList.innerHTML = "";
         }
-        finalEndLocation = "vnode-" + endLocationSelector.value.slice(0,3);
+        finalEndLocation = "vnode-" + endLocationSelector.value.slice(0, 3);
         if (finalStartLocation && finalEndLocation) {
-          const path = PathfindingAPI.findPath(finalStartLocation, finalEndLocation);
-
-          connectCircles(path);
+          connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
         }
       });
 
-
+      // Dismiss suggestion lists when clicking outside either input.
       document.addEventListener("click", (event) => {
         const clickedInsideStart =
-          startLocationSelector.contains(event.target) ||
-          startList.contains(event.target);
-
+          startLocationSelector.contains(event.target) || startList.contains(event.target);
         const clickedInsideEnd =
-          endLocationSelector.contains(event.target) ||
-          endList.contains(event.target);
+          endLocationSelector.contains(event.target) || endList.contains(event.target);
 
-        if (!clickedInsideStart) {
-          startList.innerHTML = "";
-        }
-
-        if (!clickedInsideEnd) {
-          endList.innerHTML = "";
-        }
+        if (!clickedInsideStart) startList.innerHTML = "";
+        if (!clickedInsideEnd) endList.innerHTML = "";
       });
 
-      startLocator.addEventListener("click", (event) => {
-        startList.innerHTML = "";
+      startLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
+      endLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
 
-        startLocations.forEach((location) => {
-          const li = document.createElement("li");
-          li.textContent = location;
-          startList.appendChild(li);
-        });
-      });
-
-        endLocationSelector.addEventListener("click", (event) => {
-          endList.innerHTML = "";
-
-          endLocations.forEach((location) => {
-            const li = document.createElement("li");
-            li.textContent = location;
-            endList.appendChild(li);
-          });
-        });
-
-        startLocationSelector.addEventListener("focus", () => {
-          menu.style.display = "block";
-        });
-
-        endLocationSelector.addEventListener("focus", () => {
-          menu.style.display = "block";
-        });
-
-        // Mobile movement
-        // const svg = document.getElementById('svg-container');
-        // console.log(svg);
-        // let isDragging = false;
-
-        // svg.addEventListener('touchstart', () => { 
-        //   isDragging = true; 
-        //   console.log(isDragging);
-        // });
-        
-        // svg.addEventListener('touchend', () => { isDragging = false; });
-        // svg.addEventListener('touchmove', (e) => {
-        //   if (isDragging) {
-        //     const touch = e.touches[0];
-        //     svg.style.left = touch.clientX - 50 + 'px'; // Center on finger
-        //     svg.style.top = touch.clientY - 50 + 'px';
-        //   }
-        // });
-
-
-      
-      // startLocations.forEach((location) => {
-      //   addOptionToSelectTag(location, startLocationSelector);
-      // });
-      // endLocations.forEach((location) => {
-      //   addOptionToSelectTag(location, endLocationSelector);
-      // });
-
-      // function addOptionToSelectTag(option, parent) {
-      //   //accepts a string and creates an option tag
-      //   const newOptionElement = document.createElement("option");
-      //   newOptionElement.textContent = option;
-      //   parent.appendChild(newOptionElement);
-      // }
-
-
-
-
-
-
-      // Add event listeners here
-      // endLocationSelector.addEventListener("change", (event) => {
-      //   endLocation = event.target.value;
-      //   endLocation = "vnode-" + endLocationSelector.value;
-      //   console.log(endLocation);
-      //   if (startLocation && endLocation) {
-      //     const path = PathfindingAPI.findPath(startLocation, endLocation);
-
-      //     connectCircles(path);
-      //   }
-      // });
-      // startLocationSelector.addEventListener("change", (event) => {
-      //   startLocation = event.target.value;
-      //   startLocation = "vnode-" + startLocationSelector.value;
-      //   console.log(startLocation);
-
-
-      //   if (startLocation && endLocation) {
-      //     const path = PathfindingAPI.findPath(startLocation, endLocation);
-
-      //     connectCircles(path);
-
-      //   }
-      // });
-
-
+      // Draws SVG lines connecting the ordered list of node IDs returned by the pathfinder.
       function connectCircles(ids) {
-        const svg = document.querySelector("svg");
         const linesGroup = document.getElementById("lines");
-
-        // Clear existing lines
         linesGroup.innerHTML = "";
 
-        // Connect each circle to the next one in the array
         for (let i = 0; i < ids.length - 1; i++) {
           const circle1 = document.getElementById(ids[i]);
           const circle2 = document.getElementById(ids[i + 1]);
 
           if (circle1 && circle2) {
-            const x1 = circle1.getAttribute("cx");
-            const y1 = circle1.getAttribute("cy");
-            const x2 = circle2.getAttribute("cx");
-            const y2 = circle2.getAttribute("cy");
-
-            const line = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "line"
-            );
-            line.setAttribute("x1", x1);
-            line.setAttribute("y1", y1);
-            line.setAttribute("x2", x2);
-            line.setAttribute("y2", y2);
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", circle1.getAttribute("cx"));
+            line.setAttribute("y1", circle1.getAttribute("cy"));
+            line.setAttribute("x2", circle2.getAttribute("cx"));
+            line.setAttribute("y2", circle2.getAttribute("cy"));
             line.setAttribute("stroke", "#DCAA00");
             line.setAttribute("stroke-width", "2");
-            line.setAttribute("stroke-linecap", "round")
-
+            line.setAttribute("stroke-linecap", "round");
             linesGroup.appendChild(line);
           }
         }
       }
     </script>
+  </div>
+
+  <!-- Slide-up Info Drawer -->
+  <div class="info-drawer" id="infoDrawer">
+    <div class="info-drawer-handle" id="infoDrawerHandle">
+      <span class="info-drawer-label">
+        <span class="info-icon">ℹ</span>
+        <span>More Info</span>
+        <span class="drawer-arrow" id="drawerArrow">∧</span>
+      </span>
+    </div>
+    <div class="info-drawer-divider"></div>
+    <div class="info-drawer-body">
+      <!-- Content to be implemented -->
+    </div>
+  </div>
+
+  <script>
+    const infoDrawer = document.getElementById('infoDrawer');
+    const infoDrawerHandle = document.getElementById('infoDrawerHandle');
+    const drawerArrow = document.getElementById('drawerArrow');
+
+    infoDrawerHandle.addEventListener('click', () => {
+      const isOpen = infoDrawer.classList.toggle('open');
+      drawerArrow.textContent = isOpen ? '∨' : '∧';
+    });
+  </script>
 </body>
 
 </html>
