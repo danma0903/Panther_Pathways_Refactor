@@ -37,8 +37,60 @@
     <script type="module">
       import { PathfindingAPI } from "./js/main.js"
 
-      const startLocations = ["PAS (Parking Structure)", "MAK (Makerspace)", "LUC (Lusk Center)", "CST (College Store)", "HSP (Hoos Swimming Pool)", "CDC (Child Development Center)", "PAN (Panther Cares)", "UNS (Union Stadium)", "NOG (North Gymnasium)", "STC (Student Center)", "SOG (South Gymnasium)", "BUS (Business Building)", "LRC (Learning Resource Center)", "NAS (Natural Sciences Building)", "MOH (Mohr Hall)", "RHS (Rodda Hall South)", "RHN (Rodda Hall North)", "CIC (City Cafe)", "FFA (Fischbacher Fine Arts Building)", "PAC (Performing Arts Center)", "STS (Student Services)", "SHW (Student Health & Wellness Center)", "COS (Cosmetology Building)", "TEC (Technology)", "ACT (Art Court Theatre)"];
-      const endLocations = ["PAS (Parking Structure)", "MAK (Makerspace)", "LUC (Lusk Center)", "CST (College Store)", "HSP (Hoos Swimming Pool)", "CDC (Child Development Center)", "PAN (Panther Cares)", "UNS (Union Stadium)", "NOG (North Gymnasium)", "STC (Student Center)", "SOG (South Gymnasium)", "BUS (Business Building)", "LRC (Learning Resource Center)", "NAS (Natural Sciences Building)", "MOH (Mohr Hall)", "RHS (Rodda Hall South)", "RHN (Rodda Hall North)", "CIC (City Cafe)", "FFA (Fischbacher Fine Arts Building)", "PAC (Performing Arts Center)", "STS (Student Services)", "SHW (Student Health & Wellness Center)", "COS (Cosmetology Building)", "TEC (Technology)", "ACT (Art Court Theatre)"];
+      const startLocations = [
+        "PAS (Parking Structure)",
+        "MAK (Makerspace)", 
+        "LUC (Lusk Center)", 
+        "CST (College Store)", 
+        "HSP (Hoos Swimming Pool)", 
+        "CDC (Child Development Center)", 
+        "PAN (Panther Cares)", 
+        "UNS (Union Stadium)", 
+        "NOG (North Gymnasium)", 
+        "STC (Student Center)", 
+        "SOG (South Gymnasium)", 
+        "BUS (Business Building)", 
+        "LRC (Learning Resource Center)", 
+        "NAS (Natural Sciences Building)", 
+        "MOH (Mohr Hall)", 
+        "RHS (Rodda Hall South)", 
+        "RHN (Rodda Hall North)", 
+        "CIC (City Cafe)", 
+        "FFA (Fischbacher Fine Arts Building)", 
+        "PAC (Performing Arts Center)", 
+        "STS (Student Services)", 
+        "SHW (Student Health & Wellness Center)", 
+        "COS (Cosmetology Building)", 
+        "TEC (Technology)", 
+        "ACT (Art Court Theatre)"
+      ];
+      const endLocations = [
+        "PAS (Parking Structure)",
+        "MAK (Makerspace)", 
+        "LUC (Lusk Center)", 
+        "CST (College Store)", 
+        "HSP (Hoos Swimming Pool)", 
+        "CDC (Child Development Center)", 
+        "PAN (Panther Cares)", 
+        "UNS (Union Stadium)", 
+        "NOG (North Gymnasium)", 
+        "STC (Student Center)", 
+        "SOG (South Gymnasium)", 
+        "BUS (Business Building)", 
+        "LRC (Learning Resource Center)", 
+        "NAS (Natural Sciences Building)", 
+        "MOH (Mohr Hall)", 
+        "RHS (Rodda Hall South)", 
+        "RHN (Rodda Hall North)", 
+        "CIC (City Cafe)", 
+        "FFA (Fischbacher Fine Arts Building)", 
+        "PAC (Performing Arts Center)", 
+        "STS (Student Services)", 
+        "SHW (Student Health & Wellness Center)", 
+        "COS (Cosmetology Building)", 
+        "TEC (Technology)", 
+        "ACT (Art Court Theatre)"
+      ];
 
       startLocations.sort();
       endLocations.sort();
@@ -149,8 +201,8 @@
             line.setAttribute("y1", circle1.getAttribute("cy"));
             line.setAttribute("x2", circle2.getAttribute("cx"));
             line.setAttribute("y2", circle2.getAttribute("cy"));
-            line.setAttribute("stroke", "#DCAA00");
-            line.setAttribute("stroke-width", "2");
+            line.setAttribute("stroke", "#1F3CFF");
+            line.setAttribute("stroke-width", "2.5");
             line.setAttribute("stroke-linecap", "round");
             linesGroup.appendChild(line);
           }

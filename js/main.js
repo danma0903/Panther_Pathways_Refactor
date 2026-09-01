@@ -58,13 +58,14 @@ function placeNode(container, nodeData, radius) {
 	node.setAttribute("cy", nodeData.yCoord);
 	node.setAttribute("r", radius);
 	node.setAttribute("fill", "#ff6161");
+	node.setAttribute("visibility", "hidden");
 	container.appendChild(node);
 }
 
 // ── Initialisation ────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
-	fetch("vector_map.svg")
+	fetch("vector_map_final.svg")
 		.then((response) => response.text())
 		.then(async (svgContent) => {
 			const parser = new DOMParser();

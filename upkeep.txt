@@ -12,5 +12,17 @@ For future upkeep:
     { "from": *node-[new node name]*, "to": *node-[connecting node]*, "isVirtual": (false/true) },
     ** Fill as true at the end if the new node that was created is a virtual node.
 
-    3. If new selections are to be added to the selection m,enu, update the variables
+    3. If new selections are to be added to the selection menu, update the variables
     "startLocation" and "endLocation" found in index.html
+
+
+
+    When exporting a new svg map in, ensure all components of the svg text file are wrapped in <g id="main"> </g>
+    Additionally, place the node group in Figma underneath the background to keep node circles from showing
+
+    Nodes must be manually added into db.json, using the svg text file for their "x" and "y" coordinates.
+    The nodes on the Figma map are just placeholders; the program reads data from the db.json file. 
+
+    When exporting a new Figma map, ensure the name reflects what is being read from index.html
+
+    
