@@ -235,3 +235,77 @@ input:focus {
     overflow-y: auto;
     height: calc(50vh - 49px);
 }
+
+.legend-body {
+    font-family: "Bricolage Grotesque", Arial, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+
+    padding: 15px;
+    background-color: #E7E7E7;
+    border-radius: 8px;
+    height: 8rem;
+    margin-bottom: 1rem;
+}
+
+.parking-buttons {
+    display: flex;
+    gap: 16px;
+    flex-wrap: nowrap;
+
+}
+
+
+.btns {
+    flex: 1;
+    font-family: "Bricolage Grotesque", Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    background-color: #8A0228;
+    border-radius: 8px;
+    width: 100%;
+    color: #FFFFFF;
+    border:none;
+    height: 2.5rem;
+    cursor: pointer;
+}
+
+.btns:hover {
+    background-color:#9c002c
+}
+
+.contact-info {
+    font-family: "Bricolage Grotesque", Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.legend-contents {
+    display: grid;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+    gap: 10px 30px;
+    white-space: nowrap;
+    max-width: 450px;
+}
+
+.legend-symbols {
+    width: 25px;
+    height: 25px;
+}
+
+.legend-text {
+    font-family: "Bricolage Grotesque", Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-left: 8px;
+    
+
+}
+
+.pair {
+    display: flex;
+    align-items: center;
+
+}
+
