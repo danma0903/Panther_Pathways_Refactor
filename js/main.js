@@ -4,11 +4,29 @@ import { graph, Dijkstras } from "./graph.js";
 // canvas:      per-gesture snapshot (mouse/touch start position, transform, SCTM)
 // scale:       current zoom level kept in sync with the SVG matrix
 // canvasWidth/Height: intrinsic dimensions of the SVG canvas (fixed at 1900×1900)
+// velocity:    current pan speed (element-space px / ms), tracked during a drag
+//              and used to drive the momentum/inertia animation after release
+// momentumFrame: requestAnimationFrame id for the running momentum loop, so it
+//              can be cancelled if a new gesture starts or a zoom happens
+// frameAnimFrame: requestAnimationFrame id for the "frame the path" animation
+//              triggered after a path is found, cancellable the same way
 let canvas = {};
 let canvasHeight;
 let canvasWidth;
 let scale = 1;
 let myGraph;
+let velocity = { x: 0, y: 0 };
+let momentumFrame = null;
+let frameAnimFrame = null;
+
+// Tuning knobs for the momentum/inertia effect.
+const FRICTION_PER_MS = 0.003; // higher = decays/stops sooner
+const MIN_VELOCITY = 0.005; // px/ms below which momentum just stops
+const VELOCITY_SMOOTHING = 0.3; // weight given to the newest sample in the EMA
+
+// Tuning knobs for the "frame the path" auto-zoom.
+const FRAME_PADDING = 150; // extra margin (in canvas units) around the path bbox
+const FRAME_DURATION = 500; // ms for the fit animation
 
 // ── Data loading ──────────────────────────────────────────────────────────────
 
@@ -122,6 +140,163 @@ function viewPortToElementCoordinateSpaceTransformation(x, y, sctm = null) {
 	return { x: transformedPoint.x, y: transformedPoint.y };
 }
 
+// ── Momentum / inertia ────────────────────────────────────────────────────────
+
+function stopMomentum() {
+	// Cancels any in-flight momentum animation and clears the velocity so a new
+	// gesture starts from a clean state.
+	if (momentumFrame) {
+		cancelAnimationFrame(momentumFrame);
+		momentumFrame = null;
+	}
+	velocity = { x: 0, y: 0 };
+}
+
+function trackVelocity(dt, deltaX, deltaY) {
+	// Updates the smoothed velocity estimate (element-space px / ms) from the
+	// latest pointer delta. An exponential moving average is used rather than the
+	// raw instantaneous speed so a single noisy/fast event right before release
+	// doesn't produce a wild flick.
+	const safeDt = Math.max(dt, 1); // guard against div-by-zero on duplicate events
+	velocity.x = velocity.x * (1 - VELOCITY_SMOOTHING) + (deltaX / safeDt) * VELOCITY_SMOOTHING;
+	velocity.y = velocity.y * (1 - VELOCITY_SMOOTHING) + (deltaY / safeDt) * VELOCITY_SMOOTHING;
+}
+
+function startMomentum() {
+	// Launches a decaying animation that continues panning in the direction the
+	// gesture was moving when released, slowing to a stop. No-ops if the release
+	// velocity is too small to bother animating.
+	const speed = Math.hypot(velocity.x, velocity.y);
+	if (speed < MIN_VELOCITY) {
+		velocity = { x: 0, y: 0 };
+		return;
+	}
+
+	let lastTime = performance.now();
+
+	function step(now) {
+		const dt = now - lastTime;
+		lastTime = now;
+
+		// Frame-rate independent exponential decay, so the glide feels the same
+		// regardless of display refresh rate.
+		const decay = Math.exp(-FRICTION_PER_MS * dt);
+		velocity.x *= decay;
+		velocity.y *= decay;
+
+		const [a, b, c, d, panX, panY] = getTransform();
+		const targetX = panX + velocity.x * dt;
+		const targetY = panY + velocity.y * dt;
+		const { x, y } = constrainPan(targetX, targetY, scale);
+
+		// If we hit a pan boundary, kill velocity on that axis so we don't keep
+		// pushing against the wall for the remaining decay.
+		if (x !== targetX) velocity.x = 0;
+		if (y !== targetY) velocity.y = 0;
+
+		document.getElementById("main").setAttribute("transform", `matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})`);
+
+		if (Math.hypot(velocity.x, velocity.y) > MIN_VELOCITY) {
+			momentumFrame = requestAnimationFrame(step);
+		} else {
+			momentumFrame = null;
+			velocity = { x: 0, y: 0 };
+		}
+	}
+
+	momentumFrame = requestAnimationFrame(step);
+}
+
+// ── Frame-to-path auto zoom ───────────────────────────────────────────────────
+
+function cancelFrameAnimation() {
+	// Cancels any in-flight "frame the path" animation. Called whenever the user
+	// starts a new gesture, so a manual pan/zoom always takes priority.
+	if (frameAnimFrame) {
+		cancelAnimationFrame(frameAnimFrame);
+		frameAnimFrame = null;
+	}
+}
+
+function animateTransform(targetScale, targetPanX, targetPanY, duration) {
+	// Smoothly interpolates the #main transform from its current state to the
+	// target scale/pan over `duration` ms, using an ease-out cubic so the motion
+	// settles rather than stopping abruptly.
+	const [, b, c] = getTransform();
+	const startScale = scale;
+	const [, , , , startPanX, startPanY] = getTransform();
+	const startTime = performance.now();
+
+	function step(now) {
+		const elapsed = now - startTime;
+		const t = Math.min(elapsed / duration, 1);
+		const eased = 1 - Math.pow(1 - t, 3);
+
+		const currentScale = startScale + (targetScale - startScale) * eased;
+		const currentPanX = startPanX + (targetPanX - startPanX) * eased;
+		const currentPanY = startPanY + (targetPanY - startPanY) * eased;
+
+		scale = currentScale;
+		document.getElementById("main").setAttribute(
+			"transform",
+			`matrix(${currentScale}, ${b}, ${c}, ${currentScale}, ${currentPanX}, ${currentPanY})`,
+		);
+
+		if (t < 1) {
+			frameAnimFrame = requestAnimationFrame(step);
+		} else {
+			frameAnimFrame = null;
+		}
+	}
+
+	frameAnimFrame = requestAnimationFrame(step);
+}
+
+function frameToNodes(nodeNames, padding = FRAME_PADDING, duration = FRAME_DURATION) {
+	// Computes the bounding box of the given nodes and animates the #main
+	// transform so that box is centered and fully visible (with padding).
+	//
+	// This relies on the same coordinate convention constrainPan already uses:
+	// canvasWidth/canvasHeight represent the viewport's extent in the same unit
+	// space that node coordinates, scale, and the transform's pan (e, f) live in.
+	// At scale=1/pan=0 the full 1900×1900 canvas exactly fills the viewport, so
+	// "fit bbox to viewport" and "fit bbox to canvasWidth/canvasHeight" are the
+	// same computation.
+	if (!myGraph || !nodeNames || nodeNames.length === 0) return;
+
+	const points = nodeNames
+		.map((name) => myGraph.getNode(name))
+		.filter((node) => node && Number.isFinite(node.xCoord) && Number.isFinite(node.yCoord))
+		.map((node) => ({ x: node.xCoord, y: node.yCoord }));
+
+	if (points.length === 0) return;
+
+	stopMomentum();
+	cancelFrameAnimation();
+
+	const minX = Math.min(...points.map((p) => p.x));
+	const maxX = Math.max(...points.map((p) => p.x));
+	const minY = Math.min(...points.map((p) => p.y));
+	const maxY = Math.max(...points.map((p) => p.y));
+
+	const bboxWidth = Math.max(maxX - minX, 1);
+	const bboxHeight = Math.max(maxY - minY, 1);
+	const centerX = (minX + maxX) / 2;
+	const centerY = (minY + maxY) / 2;
+
+	// Largest scale at which the padded bounding box still fits the viewport.
+	const scaleX = canvasWidth / (bboxWidth + padding * 2);
+	const scaleY = canvasHeight / (bboxHeight + padding * 2);
+	const targetScale = Math.max(1, Math.min(8, Math.min(scaleX, scaleY)));
+
+	// Pan so the bbox center lands on the viewport center.
+	const targetPanX = canvasWidth / 2 - targetScale * centerX;
+	const targetPanY = canvasHeight / 2 - targetScale * centerY;
+	const { x: constrainedX, y: constrainedY } = constrainPan(targetPanX, targetPanY, targetScale);
+
+	animateTransform(targetScale, constrainedX, constrainedY, duration);
+}
+
 // ── Mouse pan ─────────────────────────────────────────────────────────────────
 
 function panStart(e) {
@@ -129,11 +304,14 @@ function panStart(e) {
 	// current SVG transform matrix. mousemove/mouseup are registered on `document`
 	// rather than the SVG so a fast drag that leaves the element boundary doesn't
 	// silently drop the listeners.
+	stopMomentum();
+	cancelFrameAnimation();
+
 	const { clientX, clientY } = e;
 	const sctm = document.getElementById("main").getScreenCTM();
 	const transformed = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, sctm);
 
-	canvas = { mouseStart: transformed, transform: getTransform(), sctm };
+	canvas = { mouseStart: transformed, transform: getTransform(), sctm, lastMoveTime: performance.now() };
 	document.addEventListener("mousemove", onPan);
 	document.addEventListener("mouseup", endPan);
 }
@@ -148,6 +326,7 @@ function onPan(e) {
 	// to convert element-space units back to viewport pixels before adding it to
 	// the existing translation.
 	const { clientX, clientY } = e;
+	const now = performance.now();
 	const currentMousePosition = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, canvas.sctm);
 	const [a, b, c, d, translateX, translateY] = canvas.transform;
 
@@ -155,6 +334,9 @@ function onPan(e) {
 		x: (currentMousePosition.x - canvas.mouseStart.x) * scale,
 		y: (currentMousePosition.y - canvas.mouseStart.y) * scale,
 	};
+
+	trackVelocity(now - (canvas.lastMoveTime ?? now), mouseDelta.x, mouseDelta.y);
+	canvas.lastMoveTime = now;
 
 	const { x, y } = constrainPan(translateX + mouseDelta.x, translateY + mouseDelta.y, scale);
 	document.getElementById("main").setAttribute("transform", `matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})`);
@@ -165,9 +347,10 @@ function onPan(e) {
 }
 
 function endPan(e) {
-	canvas = {};
 	document.removeEventListener("mousemove", onPan);
 	document.removeEventListener("mouseup", endPan);
+	canvas = {};
+	startMomentum();
 }
 
 // ── Touch pan & pinch zoom ────────────────────────────────────────────────────
@@ -176,13 +359,16 @@ function endPan(e) {
 
 function touchStart(e) {
 	e.preventDefault();
+	stopMomentum();
+	cancelFrameAnimation();
+
 	const sctm = document.getElementById("main").getScreenCTM();
 
 	if (e.touches.length === 1) {
 		// Single finger: start a pan session identical to panStart.
 		const { clientX, clientY } = e.touches[0];
 		const transformed = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, sctm);
-		canvas = { mouseStart: transformed, transform: getTransform(), sctm };
+		canvas = { mouseStart: transformed, transform: getTransform(), sctm, lastMoveTime: performance.now() };
 	} else if (e.touches.length === 2) {
 		// Second finger added: record the current inter-finger distance as the
 		// baseline for computing the zoom ratio on subsequent move events.
@@ -202,6 +388,7 @@ function onTouchMove(e) {
 	if (e.touches.length === 1 && canvas.mouseStart) {
 		// ── 1-finger pan: same math as onPan ─────────────────────────────────────
 		const { clientX, clientY } = e.touches[0];
+		const now = performance.now();
 		const currentPos = viewPortToElementCoordinateSpaceTransformation(clientX, clientY, canvas.sctm);
 		const [a, b, c, d, translateX, translateY] = canvas.transform;
 
@@ -209,6 +396,9 @@ function onTouchMove(e) {
 			x: (currentPos.x - canvas.mouseStart.x) * scale,
 			y: (currentPos.y - canvas.mouseStart.y) * scale,
 		};
+
+		trackVelocity(now - (canvas.lastMoveTime ?? now), mouseDelta.x, mouseDelta.y);
+		canvas.lastMoveTime = now;
 
 		const { x, y } = constrainPan(translateX + mouseDelta.x, translateY + mouseDelta.y, scale);
 		document.getElementById("main").setAttribute("transform", `matrix(${a}, ${b}, ${c}, ${d}, ${x}, ${y})`);
@@ -225,6 +415,9 @@ function onTouchMove(e) {
 		// The midpoint between the two fingers serves as the focal point (equivalent
 		// to the cursor position in onZoom). See onZoom for a full explanation of
 		// the zoom-toward-point translation math.
+		//
+		// Momentum is not tracked during pinch — velocity is reset on release below
+		// so a prior 1-finger flick doesn't bleed into or survive a pinch gesture.
 		const dx = e.touches[0].clientX - e.touches[1].clientX;
 		const dy = e.touches[0].clientY - e.touches[1].clientY;
 		const newDist = Math.hypot(dx, dy);
@@ -249,25 +442,30 @@ function onTouchMove(e) {
 		document.getElementById("main").setAttribute("transform", `matrix(${newScale}, ${b}, ${c}, ${newScale}, ${cx}, ${cy})`);
 
 		canvas.lastPinchDistance = newDist;
+		velocity = { x: 0, y: 0 };
 	}
 }
 
 function onTouchEnd(e) {
 	if (e.touches.length === 0) {
-		// All fingers lifted — tear down listeners and clear session state.
+		// All fingers lifted — tear down listeners, clear session state, and let
+		// any accumulated velocity carry the pan forward with a decaying glide.
 		canvas = {};
 		document.removeEventListener("touchmove", onTouchMove);
 		document.removeEventListener("touchend", onTouchEnd);
+		startMomentum();
 	} else if (e.touches.length === 1) {
 		// One finger lifted after a pinch: transition seamlessly into a pan session.
 		// Resetting mouseStart to the remaining finger's position prevents the first
-		// pan move from producing a large spurious jump.
+		// pan move from producing a large spurious jump. Velocity was already reset
+		// during the pinch, so this doesn't inherit any pinch-driven motion.
 		const touch = e.touches[0];
 		const sctm = document.getElementById("main").getScreenCTM();
 		const transformed = viewPortToElementCoordinateSpaceTransformation(touch.clientX, touch.clientY, sctm);
 		canvas.mouseStart = transformed;
 		canvas.transform = getTransform();
 		canvas.sctm = sctm;
+		canvas.lastMoveTime = performance.now();
 		delete canvas.lastPinchDistance;
 	}
 }
@@ -276,6 +474,11 @@ function onTouchEnd(e) {
 
 function onZoom(e) {
 	e.preventDefault();
+
+	// A zoom while momentum or a frame-to-path animation is still running would
+	// fight with them, so cancel both — the scroll gesture is the new intent.
+	stopMomentum();
+	cancelFrameAnimation();
 
 	// Convert the cursor position to element space to identify which point in the
 	// map the user is hovering over — this becomes the fixed focal point for zoom.
@@ -387,6 +590,7 @@ function distance(p1, p2) {
 export const PathfindingAPI = {
 	findPath(startNode, endNode) {
 		if (startNode === endNode) {
+			frameToNodes([startNode]);
 			return [startNode];
 		}
 
@@ -410,6 +614,11 @@ export const PathfindingAPI = {
 			path.unshift(current.getName());
 			current = myGraph.getNode(prev[current.getName()]);
 		}
+
+		// Frame the viewport around the full route, including the true start/end
+		// (path itself only contains the intermediate + entrance nodes).
+		frameToNodes([startNode, ...path, endNode]);
+
 		return path;
 	},
 };

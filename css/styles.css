@@ -181,12 +181,14 @@ input:focus {
     left: 0;
     width: 100%;
     height: 35vh;
+    min-height: 380px; /* 👈 Prevents the drawer from getting too short on mobile */
     background-color: rgb(240, 240, 240);
     box-shadow: 0 -1px 4px #757575;
     z-index: 50;
-    transform: translateY(calc(100% - 48px));
+    transform: translateY(calc(100% - 48px)); /* 48px will now always fit */
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
 .info-drawer.open {
     transform: translateY(0);
@@ -296,7 +298,7 @@ input:focus {
 
 .legend-text {
     font-family: "Bricolage Grotesque", Arial, sans-serif;
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 600;
     margin-left: 8px;
     
@@ -309,3 +311,19 @@ input:focus {
 
 }
 
+@media (max-width: 515px) {
+    .legend-text {
+        font-size: 0.7rem;
+        font-weight: 800;
+        white-space: wrap;
+
+    }
+
+    .info-drawer {
+        height: calc((100vh - 99vw));
+    }
+
+    .legend-body {
+        height: calc(8rem + 10vw);
+    }
+}
