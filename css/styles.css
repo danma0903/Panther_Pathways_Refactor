@@ -313,17 +313,17 @@ input:focus {
 
 @media (max-width: 515px) {
     .legend-text {
-        font-size: 0.7rem;
+        font-size: 0.9rem;
         font-weight: 800;
         white-space: wrap;
 
     }
 
     .info-drawer {
-        height: calc((100vh - 99vw));
+        height: calc((85vh - 70vw));
     }
 
     .legend-body {
-        height: calc(8rem + 10vw);
+        height: calc(8rem + 5vw);
     }
 }
