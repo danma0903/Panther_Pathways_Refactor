@@ -36,165 +36,160 @@
 
     <script type="module">
       import { PathfindingAPI } from "./js/main.js"
-
-      const startLocations = [
+    
+      const locations = [
         "PAS (Parking Structure)",
-        "MAK (Makerspace)", 
-        "LUC (Lusk Center)", 
-        "CST (College Store)", 
-        "HSP (Hoos Swimming Pool)", 
-        "CDC (Child Development Center)", 
-        "PAN (Panther Cares)", 
-        "UNS (Union Stadium)", 
-        "NOG (North Gymnasium)", 
-        "STC (Student Center)", 
-        "SOG (South Gymnasium)", 
-        "BUS (Business Building)", 
-        "LRC (Learning Resource Center)", 
-        "NAS (Natural Sciences Building)", 
-        "MOH (Mohr Hall)", 
-        "RHS (Rodda Hall South)", 
-        "RHN (Rodda Hall North)", 
-        "CIC (City Cafe)", 
-        "FFA (Fischbacher Fine Arts Building)", 
-        "PAC (Performing Arts Center)", 
-        "STS (Student Services)", 
-        "SHW (Student Health & Wellness Center)", 
-        "COS (Cosmetology Building)", 
-        "TEC (Technology)", 
+        "MAK (Makerspace)",
+        "LUC (Lusk Center)",
+        "CST (College Store)",
+        "HSP (Hoos Swimming Pool)",
+        "CDC (Child Development Center)",
+        "PAN (Panther Cares)",
+        "UNS (Union Stadium)",
+        "NOG (North Gymnasium)",
+        "STC (Student Center)",
+        "SOG (South Gymnasium)",
+        "BUS (Business Building)",
+        "LRC (Learning Resource Center)",
+        "NAS (Natural Sciences Building)",
+        "MOH (Mohr Hall)",
+        "RHS (Rodda Hall South)",
+        "RHN (Rodda Hall North)",
+        "CIC (City Cafe)",
+        "FFA (Fischbacher Fine Arts Building)",
+        "PAC (Performing Arts Center)",
+        "STS (Student Services)",
+        "SHW (Student Health & Wellness Center)",
+        "COS (Cosmetology Building)",
+        "TEC (Technology)",
         "ACT (Art Court Theatre)"
-      ];
-      const endLocations = [
-        "PAS (Parking Structure)",
-        "MAK (Makerspace)", 
-        "LUC (Lusk Center)", 
-        "CST (College Store)", 
-        "HSP (Hoos Swimming Pool)", 
-        "CDC (Child Development Center)", 
-        "PAN (Panther Cares)", 
-        "UNS (Union Stadium)", 
-        "NOG (North Gymnasium)", 
-        "STC (Student Center)", 
-        "SOG (South Gymnasium)", 
-        "BUS (Business Building)", 
-        "LRC (Learning Resource Center)", 
-        "NAS (Natural Sciences Building)", 
-        "MOH (Mohr Hall)", 
-        "RHS (Rodda Hall South)", 
-        "RHN (Rodda Hall North)", 
-        "CIC (City Cafe)", 
-        "FFA (Fischbacher Fine Arts Building)", 
-        "PAC (Performing Arts Center)", 
-        "STS (Student Services)", 
-        "SHW (Student Health & Wellness Center)", 
-        "COS (Cosmetology Building)", 
-        "TEC (Technology)", 
-        "ACT (Art Court Theatre)"
-      ];
-
-      startLocations.sort();
-      endLocations.sort();
-
+      ].sort();
+    
       const startLocationSelector = document.getElementById("startLocator");
       const endLocationSelector = document.getElementById("endLocator");
       const startList = document.getElementById("startSuggestions");
       const endList = document.getElementById("endSuggestions");
-
+    
       let finalStartLocation = null;
       let finalEndLocation = null;
-
-      // Filter suggestions as the user types.
-      startLocationSelector.addEventListener("keyup", (event) => {
-        const qry = startLocationSelector.value.toLowerCase();
-        startList.innerHTML = "";
-        if (!qry.length) return;
-        startLocations
-          .filter((item) => item.toLowerCase().includes(qry))
-          .forEach((location) => {
-            const li = document.createElement("li");
-            li.textContent = location;
-            startList.appendChild(li);
-          });
-      });
-
-      endLocationSelector.addEventListener("keyup", (event) => {
-        const qry = endLocationSelector.value.toLowerCase();
-        endList.innerHTML = "";
-        if (!qry.length) return;
-        endLocations
-          .filter((item) => item.toLowerCase().includes(qry))
-          .forEach((location) => {
-            const li = document.createElement("li");
-            li.textContent = location;
-            endList.appendChild(li);
-          });
-      });
-
-      // Show the full list when the input is clicked.
-      startLocator.addEventListener("click", (event) => {
-        startList.innerHTML = "";
-        startLocations.forEach((location) => {
-          const li = document.createElement("li");
-          li.textContent = location;
-          startList.appendChild(li);
-        });
-      });
-
-      endLocationSelector.addEventListener("click", (event) => {
-        endList.innerHTML = "";
-        endLocations.forEach((location) => {
-          const li = document.createElement("li");
-          li.textContent = location;
-          endList.appendChild(li);
-        });
-      });
-
-      // Selecting a suggestion fills the input; once both endpoints are set, run pathfinding.
-      startList.addEventListener("click", (event) => {
-        if (event.target.tagName === "LI") {
-          startLocationSelector.value = event.target.textContent;
-          startList.innerHTML = "";
-        }
-        finalStartLocation = "vnode-" + startLocationSelector.value.slice(0, 3);
+    
+      function tryPath() {
         if (finalStartLocation && finalEndLocation) {
           connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
         }
-      });
-
-      endList.addEventListener("click", (event) => {
-        if (event.target.tagName === "LI") {
-          endLocationSelector.value = event.target.textContent;
-          endList.innerHTML = "";
+      }
+    
+      // Wires one input + suggestion list: filtering, mouse selection, and keyboard nav.
+      function setupLocator(input, list, onSelect) {
+        let activeIndex = -1;
+    
+        const options = () => Array.from(list.children);
+    
+        function open(items) {
+          list.innerHTML = "";
+          activeIndex = -1;
+          items.forEach((location) => {
+            const li = document.createElement("li");
+            li.textContent = location;
+            li.setAttribute("role", "option");
+            li.addEventListener("mousemove", () => setActive(options().indexOf(li)));
+            li.addEventListener("click", () => choose(li));
+            list.appendChild(li);
+          });
+          input.setAttribute("aria-expanded", items.length ? "true" : "false");
         }
-        finalEndLocation = "vnode-" + endLocationSelector.value.slice(0, 3);
-        if (finalStartLocation && finalEndLocation) {
-          connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
+    
+        function close() {
+          list.innerHTML = "";
+          activeIndex = -1;
+          input.setAttribute("aria-expanded", "false");
         }
+    
+        function setActive(i) {
+          const opts = options();
+          if (!opts.length) return;
+          if (opts[activeIndex]) opts[activeIndex].classList.remove("active");
+          activeIndex = (i + opts.length) % opts.length;   // wraps at both ends
+          const el = opts[activeIndex];
+          el.classList.add("active");
+          el.scrollIntoView({ block: "nearest" });
+        }
+    
+        function choose(li) {
+          input.value = li.textContent;
+          close();
+          onSelect(li.textContent);
+        }
+    
+        // Use "input" rather than "keyup" so arrow/Enter presses don't rebuild the list.
+        input.addEventListener("input", () => {
+          const qry = input.value.toLowerCase().trim();
+          if (!qry.length) return close();
+          open(locations.filter((item) => item.toLowerCase().includes(qry)));
+        });
+    
+        input.addEventListener("click", () => open(locations));
+    
+        input.addEventListener("keydown", (event) => {
+          const isOpen = options().length > 0;
+    
+          switch (event.key) {
+            case "ArrowDown":
+              event.preventDefault();
+              if (!isOpen) { open(locations); setActive(0); }
+              else setActive(activeIndex + 1);
+              break;
+            case "ArrowUp":
+              event.preventDefault();
+              if (!isOpen) { open(locations); setActive(-1); }
+              else setActive(activeIndex === -1 ? -1 : activeIndex - 1);
+              break;
+            case "Enter":
+              if (isOpen && activeIndex > -1) {
+                event.preventDefault();
+                choose(options()[activeIndex]);
+              }
+              break;
+            case "Escape":
+              close();
+              break;
+            case "Tab":
+              close();
+              break;
+          }
+        });
+    
+        return { close, contains: (t) => input.contains(t) || list.contains(t) };
+      }
+    
+      const start = setupLocator(startLocationSelector, startList, (value) => {
+        finalStartLocation = "vnode-" + value.slice(0, 3);
+        tryPath();
       });
-
+    
+      const end = setupLocator(endLocationSelector, endList, (value) => {
+        finalEndLocation = "vnode-" + value.slice(0, 3);
+        tryPath();
+      });
+    
       // Dismiss suggestion lists when clicking outside either input.
       document.addEventListener("click", (event) => {
-        const clickedInsideStart =
-          startLocationSelector.contains(event.target) || startList.contains(event.target);
-        const clickedInsideEnd =
-          endLocationSelector.contains(event.target) || endList.contains(event.target);
-
-        if (!clickedInsideStart) startList.innerHTML = "";
-        if (!clickedInsideEnd) endList.innerHTML = "";
+        if (!start.contains(event.target)) start.close();
+        if (!end.contains(event.target)) end.close();
       });
-
+    
       startLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
       endLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
-
+    
       // Draws SVG lines connecting the ordered list of node IDs returned by the pathfinder.
       function connectCircles(ids) {
         const linesGroup = document.getElementById("lines");
         linesGroup.innerHTML = "";
-
+    
         for (let i = 0; i < ids.length - 1; i++) {
           const circle1 = document.getElementById(ids[i]);
           const circle2 = document.getElementById(ids[i + 1]);
-
+    
           if (circle1 && circle2) {
             const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             line.setAttribute("x1", circle1.getAttribute("cx"));

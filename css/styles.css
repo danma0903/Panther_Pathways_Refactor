@@ -127,9 +127,13 @@ input:focus {
     
 }
 
-#startSuggestions li:hover, #endSuggestions li:hover {
-    background-color: #f1f1f1;
+#startSuggestions li.active,
+#endSuggestions li.active {
+  background: #E7E7E7;
+  color: black;
 }
+
+
 
 ::placeholder {
     color: #555;
