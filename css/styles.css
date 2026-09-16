@@ -218,6 +218,7 @@ input:focus {
 }
 
 .info-icon {
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 1.1rem;
     font-style: normal;
 }
@@ -325,5 +326,6 @@ input:focus {
 
     .legend-body {
         height: calc(8rem + 5vw);
+        padding-bottom: 25px;
     }
 }
