@@ -35,243 +35,179 @@
     </div>
 
     <script type="module">
-import { PathfindingAPI } from "./js/main.js"
+      import { PathfindingAPI } from "./js/main.js"
 
-const startLocations = [
-  "PAS (Parking Structure)",
-  "MAK (Makerspace)",
-  "LUC (Lusk Center)",
-  "CST (College Store)",
-  "HSP (Hoos Swimming Pool)",
-  "CDC (Child Development Center)",
-  "PAN (Panther Cares)",
-  "UNS (Union Stadium)",
-  "NOG (North Gymnasium)",
-  "STC (Student Center)",
-  "SOG (South Gymnasium)",
-  "BUS (Business Building)",
-  "LRC (Learning Resource Center)",
-  "NAS (Natural Sciences Building)",
-  "MOH (Mohr Hall)",
-  "RHS (Rodda Hall South)",
-  "RHN (Rodda Hall North)",
-  "CIC (City Cafe)",
-  "FFA (Fischbacher Fine Arts Building)",
-  "PAC (Performing Arts Center)",
-  "STS (Student Services)",
-  "SHW (Student Health & Wellness Center)",
-  "COS (Cosmetology Building)",
-  "TEC (Technology)",
-  "ACT (Art Court Theatre)"
-];
-const endLocations = [
-  "PAS (Parking Structure)",
-  "MAK (Makerspace)",
-  "LUC (Lusk Center)",
-  "CST (College Store)",
-  "HSP (Hoos Swimming Pool)",
-  "CDC (Child Development Center)",
-  "PAN (Panther Cares)",
-  "UNS (Union Stadium)",
-  "NOG (North Gymnasium)",
-  "STC (Student Center)",
-  "SOG (South Gymnasium)",
-  "BUS (Business Building)",
-  "LRC (Learning Resource Center)",
-  "NAS (Natural Sciences Building)",
-  "MOH (Mohr Hall)",
-  "RHS (Rodda Hall South)",
-  "RHN (Rodda Hall North)",
-  "CIC (City Cafe)",
-  "FFA (Fischbacher Fine Arts Building)",
-  "PAC (Performing Arts Center)",
-  "STS (Student Services)",
-  "SHW (Student Health & Wellness Center)",
-  "COS (Cosmetology Building)",
-  "TEC (Technology)",
-  "ACT (Art Court Theatre)"
-];
+      const startLocations = [
+        "PAS (Parking Structure)",
+        "MAK (Makerspace)", 
+        "LUC (Lusk Center)", 
+        "CST (College Store)", 
+        "HSP (Hoos Swimming Pool)", 
+        "CDC (Child Development Center)", 
+        "PAN (Panther Cares)", 
+        "UNS (Union Stadium)", 
+        "NOG (North Gymnasium)", 
+        "STC (Student Center)", 
+        "SOG (South Gymnasium)", 
+        "BUS (Business Building)", 
+        "LRC (Learning Resource Center)", 
+        "NAS (Natural Sciences Building)", 
+        "MOH (Mohr Hall)", 
+        "RHS (Rodda Hall South)", 
+        "RHN (Rodda Hall North)", 
+        "CIC (City Cafe)", 
+        "FFA (Fischbacher Fine Arts Building)", 
+        "PAC (Performing Arts Center)", 
+        "STS (Student Services)", 
+        "SHW (Student Health & Wellness Center)", 
+        "COS (Cosmetology Building)", 
+        "TEC (Technology)", 
+        "ACT (Art Court Theatre)"
+      ];
+      const endLocations = [
+        "PAS (Parking Structure)",
+        "MAK (Makerspace)", 
+        "LUC (Lusk Center)", 
+        "CST (College Store)", 
+        "HSP (Hoos Swimming Pool)", 
+        "CDC (Child Development Center)", 
+        "PAN (Panther Cares)", 
+        "UNS (Union Stadium)", 
+        "NOG (North Gymnasium)", 
+        "STC (Student Center)", 
+        "SOG (South Gymnasium)", 
+        "BUS (Business Building)", 
+        "LRC (Learning Resource Center)", 
+        "NAS (Natural Sciences Building)", 
+        "MOH (Mohr Hall)", 
+        "RHS (Rodda Hall South)", 
+        "RHN (Rodda Hall North)", 
+        "CIC (City Cafe)", 
+        "FFA (Fischbacher Fine Arts Building)", 
+        "PAC (Performing Arts Center)", 
+        "STS (Student Services)", 
+        "SHW (Student Health & Wellness Center)", 
+        "COS (Cosmetology Building)", 
+        "TEC (Technology)", 
+        "ACT (Art Court Theatre)"
+      ];
 
-startLocations.sort();
-endLocations.sort();
+      startLocations.sort();
+      endLocations.sort();
 
-const startLocationSelector = document.getElementById("startLocator");
-const endLocationSelector = document.getElementById("endLocator");
-const startList = document.getElementById("startSuggestions");
-const endList = document.getElementById("endSuggestions");
+      const startLocationSelector = document.getElementById("startLocator");
+      const endLocationSelector = document.getElementById("endLocator");
+      const startList = document.getElementById("startSuggestions");
+      const endList = document.getElementById("endSuggestions");
 
-let finalStartLocation = null;
-let finalEndLocation = null;
+      let finalStartLocation = null;
+      let finalEndLocation = null;
 
-// Track which suggestion is highlighted via keyboard for each list
-let startActiveIndex = -1;
-let endActiveIndex = -1;
+      // Filter suggestions as the user types.
+      startLocationSelector.addEventListener("keyup", (event) => {
+        const qry = startLocationSelector.value.toLowerCase();
+        startList.innerHTML = "";
+        if (!qry.length) return;
+        startLocations
+          .filter((item) => item.toLowerCase().includes(qry))
+          .forEach((location) => {
+            const li = document.createElement("li");
+            li.textContent = location;
+            startList.appendChild(li);
+          });
+      });
 
-// Highlights the item at `index` and scrolls it into view
-function updateActiveItem(items, index) {
-  items.forEach((item, i) => {
-    const isActive = i === index;
-    item.classList.toggle("active", isActive);
-    // Inline fallback so it's visible even without a .active rule in CSS
-    item.style.backgroundColor = isActive ? "#e6e9ff" : "";
-  });
-  if (items[index]) {
-    items[index].scrollIntoView({ block: "nearest" });
-  }
-}
+      endLocationSelector.addEventListener("keyup", (event) => {
+        const qry = endLocationSelector.value.toLowerCase();
+        endList.innerHTML = "";
+        if (!qry.length) return;
+        endLocations
+          .filter((item) => item.toLowerCase().includes(qry))
+          .forEach((location) => {
+            const li = document.createElement("li");
+            li.textContent = location;
+            endList.appendChild(li);
+          });
+      });
 
-// Filter suggestions as the user types.
-startLocationSelector.addEventListener("keyup", (event) => {
-  if (["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
-  const qry = startLocationSelector.value.toLowerCase();
-  startList.innerHTML = "";
-  startActiveIndex = -1;
-  if (!qry.length) return;
-  startLocations
-    .filter((item) => item.toLowerCase().includes(qry))
-    .forEach((location) => {
-      const li = document.createElement("li");
-      li.textContent = location;
-      startList.appendChild(li);
-    });
-});
+      // Show the full list when the input is clicked.
+      startLocator.addEventListener("click", (event) => {
+        startList.innerHTML = "";
+        startLocations.forEach((location) => {
+          const li = document.createElement("li");
+          li.textContent = location;
+          startList.appendChild(li);
+        });
+      });
 
-endLocationSelector.addEventListener("keyup", (event) => {
-  if (["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
-  const qry = endLocationSelector.value.toLowerCase();
-  endList.innerHTML = "";
-  endActiveIndex = -1;
-  if (!qry.length) return;
-  endLocations
-    .filter((item) => item.toLowerCase().includes(qry))
-    .forEach((location) => {
-      const li = document.createElement("li");
-      li.textContent = location;
-      endList.appendChild(li);
-    });
-});
+      endLocationSelector.addEventListener("click", (event) => {
+        endList.innerHTML = "";
+        endLocations.forEach((location) => {
+          const li = document.createElement("li");
+          li.textContent = location;
+          endList.appendChild(li);
+        });
+      });
 
-// Keyboard navigation: Up/Down to move, Enter to select
-startLocationSelector.addEventListener("keydown", (event) => {
-  const items = Array.from(startList.children);
-  if (event.key === "ArrowDown") {
-    event.preventDefault();
-    if (!items.length) return;
-    startActiveIndex = (startActiveIndex + 1) % items.length;
-    updateActiveItem(items, startActiveIndex);
-  } else if (event.key === "ArrowUp") {
-    event.preventDefault();
-    if (!items.length) return;
-    startActiveIndex = (startActiveIndex - 1 + items.length) % items.length;
-    updateActiveItem(items, startActiveIndex);
-  } else if (event.key === "Enter") {
-    event.preventDefault();
-    const target = items[startActiveIndex] || items[0];
-    if (target) target.click();
-  }
-});
+      // Selecting a suggestion fills the input; once both endpoints are set, run pathfinding.
+      startList.addEventListener("click", (event) => {
+        if (event.target.tagName === "LI") {
+          startLocationSelector.value = event.target.textContent;
+          startList.innerHTML = "";
+        }
+        finalStartLocation = "vnode-" + startLocationSelector.value.slice(0, 3);
+        if (finalStartLocation && finalEndLocation) {
+          connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
+        }
+      });
 
-endLocationSelector.addEventListener("keydown", (event) => {
-  const items = Array.from(endList.children);
-  if (event.key === "ArrowDown") {
-    event.preventDefault();
-    if (!items.length) return;
-    endActiveIndex = (endActiveIndex + 1) % items.length;
-    updateActiveItem(items, endActiveIndex);
-  } else if (event.key === "ArrowUp") {
-    event.preventDefault();
-    if (!items.length) return;
-    endActiveIndex = (endActiveIndex - 1 + items.length) % items.length;
-    updateActiveItem(items, endActiveIndex);
-  } else if (event.key === "Enter") {
-    event.preventDefault();
-    const target = items[endActiveIndex] || items[0];
-    if (target) target.click();
-  }
-});
+      endList.addEventListener("click", (event) => {
+        if (event.target.tagName === "LI") {
+          endLocationSelector.value = event.target.textContent;
+          endList.innerHTML = "";
+        }
+        finalEndLocation = "vnode-" + endLocationSelector.value.slice(0, 3);
+        if (finalStartLocation && finalEndLocation) {
+          connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
+        }
+      });
 
-// Show the full list when the input is clicked.
-startLocator.addEventListener("click", (event) => {
-  startList.innerHTML = "";
-  startActiveIndex = -1;
-  startLocations.forEach((location) => {
-    const li = document.createElement("li");
-    li.textContent = location;
-    startList.appendChild(li);
-  });
-});
+      // Dismiss suggestion lists when clicking outside either input.
+      document.addEventListener("click", (event) => {
+        const clickedInsideStart =
+          startLocationSelector.contains(event.target) || startList.contains(event.target);
+        const clickedInsideEnd =
+          endLocationSelector.contains(event.target) || endList.contains(event.target);
 
-endLocationSelector.addEventListener("click", (event) => {
-  endList.innerHTML = "";
-  endActiveIndex = -1;
-  endLocations.forEach((location) => {
-    const li = document.createElement("li");
-    li.textContent = location;
-    endList.appendChild(li);
-  });
-});
+        if (!clickedInsideStart) startList.innerHTML = "";
+        if (!clickedInsideEnd) endList.innerHTML = "";
+      });
 
-// Selecting a suggestion fills the input; once both endpoints are set, run pathfinding.
-startList.addEventListener("click", (event) => {
-  if (event.target.tagName === "LI") {
-    startLocationSelector.value = event.target.textContent;
-    startList.innerHTML = "";
-    startActiveIndex = -1;
-  }
-  finalStartLocation = "vnode-" + startLocationSelector.value.slice(0, 3);
-  if (finalStartLocation && finalEndLocation) {
-    connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
-  }
-});
+      startLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
+      endLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
 
-endList.addEventListener("click", (event) => {
-  if (event.target.tagName === "LI") {
-    endLocationSelector.value = event.target.textContent;
-    endList.innerHTML = "";
-    endActiveIndex = -1;
-  }
-  finalEndLocation = "vnode-" + endLocationSelector.value.slice(0, 3);
-  if (finalStartLocation && finalEndLocation) {
-    connectCircles(PathfindingAPI.findPath(finalStartLocation, finalEndLocation));
-  }
-});
+      // Draws SVG lines connecting the ordered list of node IDs returned by the pathfinder.
+      function connectCircles(ids) {
+        const linesGroup = document.getElementById("lines");
+        linesGroup.innerHTML = "";
 
-// Dismiss suggestion lists when clicking outside either input.
-document.addEventListener("click", (event) => {
-  const clickedInsideStart =
-    startLocationSelector.contains(event.target) || startList.contains(event.target);
-  const clickedInsideEnd =
-    endLocationSelector.contains(event.target) || endList.contains(event.target);
+        for (let i = 0; i < ids.length - 1; i++) {
+          const circle1 = document.getElementById(ids[i]);
+          const circle2 = document.getElementById(ids[i + 1]);
 
-  if (!clickedInsideStart) startList.innerHTML = "";
-  if (!clickedInsideEnd) endList.innerHTML = "";
-});
-
-startLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
-endLocationSelector.addEventListener("focus", () => { menu.style.display = "block"; });
-
-// Draws SVG lines connecting the ordered list of node IDs returned by the pathfinder.
-function connectCircles(ids) {
-  const linesGroup = document.getElementById("lines");
-  linesGroup.innerHTML = "";
-
-  for (let i = 0; i < ids.length - 1; i++) {
-    const circle1 = document.getElementById(ids[i]);
-    const circle2 = document.getElementById(ids[i + 1]);
-
-    if (circle1 && circle2) {
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", circle1.getAttribute("cx"));
-      line.setAttribute("y1", circle1.getAttribute("cy"));
-      line.setAttribute("x2", circle2.getAttribute("cx"));
-      line.setAttribute("y2", circle2.getAttribute("cy"));
-      line.setAttribute("stroke", "#1F3CFF");
-      line.setAttribute("stroke-width", "2.5");
-      line.setAttribute("stroke-linecap", "round");
-      linesGroup.appendChild(line);
-    }
-  }
-}
+          if (circle1 && circle2) {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", circle1.getAttribute("cx"));
+            line.setAttribute("y1", circle1.getAttribute("cy"));
+            line.setAttribute("x2", circle2.getAttribute("cx"));
+            line.setAttribute("y2", circle2.getAttribute("cy"));
+            line.setAttribute("stroke", "#1F3CFF");
+            line.setAttribute("stroke-width", "2.5");
+            line.setAttribute("stroke-linecap", "round");
+            linesGroup.appendChild(line);
+          }
+        }
+      }
     </script>
   </div>
 
@@ -279,9 +215,9 @@ function connectCircles(ids) {
   <div class="info-drawer" id="infoDrawer">
     <div class="info-drawer-handle" id="infoDrawerHandle">
       <span class="info-drawer-label">
-        <span class="info-icon">ℹ︎</span>
-        <span>More Info</span>
-        <span class="drawer-arrow" id="drawerArrow">∧</span>
+        <span class="info-icon">ℹ</span>
+        <span class="more-info">More Info</span>
+        <span class="drawer-arrow" id="drawerArrow"></span>
       </span>
     </div>
     <div class="info-drawer-divider"></div>
@@ -339,8 +275,10 @@ function connectCircles(ids) {
     const drawerArrow = document.getElementById('drawerArrow');
 
     infoDrawerHandle.addEventListener('click', () => {
-      const isOpen = infoDrawer.classList.toggle('open');
-      drawerArrow.textContent = isOpen ? '∨' : '∧';
+    const isOpen = infoDrawer.classList.toggle('open');
+    drawerArrow.style.transform = isOpen
+        ? 'rotate(45deg)'
+        : 'translateY(2px) rotate(225deg)';
     });
   </script>
 </body>

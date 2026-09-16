@@ -210,21 +210,39 @@ input:focus {
 .info-drawer-label {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     color: #8A0228;
     font-weight: 600;
     font-size: 1rem;
     font-family: "Bricolage Grotesque", Arial, sans-serif;
+    line-height: 1;
 }
 
 .info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 1.1rem;
     font-style: normal;
+    line-height: 1;
+    transform: translateY(-1px);
+}
+
+.more-info {
+    font-weight: 650;
+    font-size: 1.15 rem;
 }
 
 .drawer-arrow {
-    font-size: 1rem;
+    width: 8px;
+    height: 8px;
+    border-right: 2.5px solid currentColor;
+    border-bottom: 2.5px solid currentColor;
+    transform: translateY(2px) rotate(225deg);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
 }
 
 .info-drawer-divider {
